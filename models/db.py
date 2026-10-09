@@ -13,17 +13,21 @@ _initialized = False
 def get_db():
     global _pool, _initialized
     if _pool is None:
-        bootstrap = mysql.connector.connect(
-            host=config.MYSQL_HOST,
-            port=config.MYSQL_PORT,
-            user=config.MYSQL_USER,
-            password=config.MYSQL_PASSWORD,
-        )
-        bcur = bootstrap.cursor()
-        bcur.execute(f"CREATE DATABASE IF NOT EXISTS `{config.MYSQL_DB}`")
-        bootstrap.commit()
-        bcur.close()
-        bootstrap.close()
+        try:
+            bootstrap = mysql.connector.connect(
+                host=config.MYSQL_HOST,
+                port=config.MYSQL_PORT,
+                user=config.MYSQL_USER,
+                password=config.MYSQL_PASSWORD,
+            )
+            bcur = bootstrap.cursor()
+            bcur.execute(f"CREATE DATABASE IF NOT EXISTS `{config.MYSQL_DB}`")
+            bootstrap.commit()
+            bcur.close()
+            bootstrap.close()
+        except Exception:
+            # Cloud hosts (e.g. Railway, Render, Supabase) may restrict CREATE DATABASE or the db already exists
+            pass
 
         _pool = pooling.MySQLConnectionPool(
             pool_name="webbased_pool",
@@ -155,6 +159,27 @@ def get_db():
                 cur.execute(idx_sql)
             except Exception:
                 pass
+
+        # Ensure default system accounts exist if users table is empty
+        try:
+            cur.execute("SELECT COUNT(*) FROM users")
+            if cur.fetchone()[0] == 0:
+                import bcrypt
+                default_users = [
+                    ("Administrator", "admin@school.edu", "admin", "admin123"),
+                    ("Custodian", "custodian@school.edu", "custodian", "custodian123"),
+                    ("Technician", "technician@school.edu", "technician", "technician123"),
+                    ("Faculty", "faculty@school.edu", "faculty", "faculty123"),
+                ]
+                now_str = datetime.now(timezone.utc).replace(tzinfo=None)
+                for uname, uemail, urole, upass in default_users:
+                    hpass = bcrypt.hashpw(upass.encode(), bcrypt.gensalt()).decode()
+                    cur.execute(
+                        "INSERT INTO users (name, email, password, role, created_at) VALUES (%s, %s, %s, %s, %s)",
+                        (uname, uemail, hpass, urole, now_str),
+                    )
+        except Exception:
+            pass
 
         cnx.commit()
         cur.close()
