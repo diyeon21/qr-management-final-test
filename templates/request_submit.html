@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header"><h2>Scan QR code</h2></div>
+    <p>Allow camera access. Point at the QR on the asset label.</p>
+    <div id="reader" class="qr-reader"></div>
+</div>
+<div class="card">
+    <div class="card-header"><h2>Report details</h2></div>
+    <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label>Equipment ID (numeric ID — filled by QR)</label>
+        <input type="text" name="equipment_id" id="equipment_id" required pattern="[0-9]+" placeholder="Numeric equipment id" value="{{ eq_id_str }}">
+        <p><strong>Equipment:</strong> {{ equipment.name|clean if equipment.name else 'Not selected' }} | {{ equipment.location|clean if equipment.location else '-' }}</p>
+        <label>Issue Description</label>
+        <textarea name="description" rows="4" required></textarea>
+        <label>Urgency</label>
+        <select name="urgency"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select>
+        <label>Image (optional)</label>
+        <input type="file" name="image" accept="image/*">
+        <button type="submit">Submit Request</button>
+    </form>
+</div>
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+const isMobile = window.matchMedia('(max-width: 768px)').matches;
+const qrboxSize = isMobile ? Math.min(220, window.innerWidth - 48) : 230;
+const scanner = new Html5QrcodeScanner('reader', { fps: 8, qrbox: qrboxSize });
+scanner.render((decodedText) => {
+    try {
+        const url = new URL(decodedText);
+        // We'll see how QR codes are formed - they probably point to /equipment/scan/<id> now
+        // Let's also support the old format with ?equipment_id=...
+        const eq = url.searchParams.get('equipment_id');
+        if (eq) {
+            window.location.href = "{{ url_for('submit.index') }}?equipment_id=" + encodeURIComponent(eq);
+        } else {
+            // New Flask format
+            window.location.href = decodedText;
+        }
+    } catch (e) {
+        console.log(decodedText);
+    }
+});
+</script>
+{% endblock %}

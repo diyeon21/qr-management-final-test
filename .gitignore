@@ -1,0 +1,17 @@
+vendor/
+uploads/*
+!uploads/.gitkeep
+
+# Python virtual environment
+.venv/
+venv/
+ENV/
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Environment variables & secrets
+.env

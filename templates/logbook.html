@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="print-only">
+    <h1 style="text-align: center; margin-bottom: 5px; font-size: 24px;">Equipment Repair Logbook & History</h1>
+    <p style="text-align: center; color: #666; margin-bottom: 20px;">Official Repair &amp; Maintenance Record</p>
+    <hr style="margin-bottom: 20px; border: 1px solid #ccc;">
+</div>
+
+<div class="grid" style="margin-bottom: 24px;">
+    <div class="stat-card">
+        <h3>Total Repairs Completed</h3>
+        <strong>{{ total_repairs }}</strong>
+    </div>
+    <div class="stat-card">
+        <h3>Repairs (Last 30 Days)</h3>
+        <strong>{{ recent_30_days }}</strong>
+    </div>
+    <div class="stat-card">
+        <h3>Most Repaired Category</h3>
+        <strong style="font-size:1.2rem;">{{ top_category|clean }}</strong>
+    </div>
+</div>
+
+<div class="card no-print">
+    <div class="card-header">
+        <h2>Logbook Filters &amp; Options</h2>
+    </div>
+    <form method="get" class="row-2">
+        <div style="grid-column: 1 / -1;">
+            <label>Search Logbook</label>
+            <input type="search" name="search" value="{{ search }}"
+                placeholder="Search equipment, location, repair action, reporter…">
+        </div>
+        <div>
+            <label>From Date</label>
+            <input type="date" name="from" value="{{ from_str }}">
+        </div>
+        <div>
+            <label>To Date</label>
+            <input type="date" name="to" value="{{ to_str }}">
+        </div>
+        <div>
+            <label>Category</label>
+            <select name="category">
+                <option value="">All Categories</option>
+                {% for c in categories %}
+                <option value="{{ c }}" {{ 'selected' if category==c else '' }}>{{ c|clean }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="display:flex; align-items:flex-end; gap:8px;">
+            <button type="submit" class="btn" style="flex:1;">Apply Filters</button>
+            {% if search or from_str or to_str or category %}
+            <a href="{{ url_for('logbook.index') }}" class="btn secondary" style="white-space:nowrap;">Clear</a>
+            {% endif %}
+        </div>
+    </form>
+    <div class="btn-row" style="margin-top:16px;">
+        {% set qs = request.args.copy() %}
+        {% set _ = qs.update({'export': 'csv'}) %}
+        <a class="btn secondary" href="?{{ qs|urlencode }}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export CSV
+        </a>
+        <button type="button" class="btn secondary" onclick="window.print()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9" />
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                <rect x="6" y="14" width="12" height="8" />
+            </svg>
+            Print / Save PDF
+        </button>
+    </div>
+</div>
+
+<div class="card" style="margin-top: 24px;">
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h2>Repair Logbook Records</h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">Chronological history of completed
+                repairs and maintenance resolutions.</p>
+        </div>
+        {% if logs %}
+        <button type="submit" form="deleteLogsForm" class="btn btn-sm"
+            style="background:#ef4444; border-color:#ef4444; display:none;" id="deleteSelectedBtn"
+            onclick="return confirm('Are you sure you want to delete the selected records? The linked requests will revert to Pending.');">
+            Delete Selected (<span id="deleteCount">0</span>)
+        </button>
+        {% endif %}
+    </div>
+
+    <input class="table-search" id="searchLogbook" type="search" placeholder="Quick search table…"
+        onkeyup="filterTable('searchLogbook', 'logbookTable')">
+
+    <form method="POST" action="{{ url_for('logbook.delete_logs') }}" id="deleteLogsForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="table-wrap">
+        <table id="logbookTable" style="font-size: 0.88rem;">
+            <thead>
+                <tr>
+                    {% if logs %}
+                    <th style="width:40px; text-align:center;">
+                        <input type="checkbox" id="selectAllLogs" title="Select all"
+                            onchange="toggleAllLogCheckboxes(this)">
+                    </th>
+                    {% endif %}
+                    <th>Repair Timeline &amp; Duration</th>
+                    <th>Equipment Asset</th>
+                    <th>Laboratory</th>
+                    <th>Reported Issue</th>
+                    <th>Technician / Reporter</th>
+                    <th>Resolution &amp; Actions Taken</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td style="text-align:center;">
+                        <input type="checkbox" name="log_ids" value="{{ log.log_id }}" class="log-checkbox"
+                            onchange="updateDeleteCount()">
+                    </td>
+                    <td style="white-space: nowrap; font-size: 0.83rem;">
+                        <div><strong style="color:var(--success, #10b981);">Completed:</strong> {{ format_date(log.date_completed) }}</div>
+                        <div style="color:var(--text-muted); font-size: 0.75rem; margin-top: 2px;">
+                            <strong>Started:</strong> {{ format_date(log.repair_start) if log.repair_start else (format_date(log.date_reported) if log.date_reported else '—') }}
+                        </div>
+                        <div style="margin-top: 4px;">
+                            <span class="badge badge-info" style="font-size: 0.72rem; font-weight: 700;">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;margin-right:3px;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                {{ log.duration_str }}
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        <strong>{{ log.equipment_name|clean }}</strong>
+                        {% if log.category %}
+                        <br><span class="badge badge-info" style="font-size:0.7rem;">{{ log.category|clean }}</span>
+                        {% endif %}
+                        {% if log.affected_component %}
+                        <br><span style="font-size:0.75rem;color:var(--primary);font-weight:600;margin-top:2px;display:inline-block;">Part: {{ log.affected_component|clean }}</span>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ log.location|clean or '—' }}</strong></td>
+                    <td style="max-width: 240px;">
+                        <div style="margin-bottom: 2px;">{{ log.description|clean }}</div>
+                        <span
+                            class="badge {{ 'badge-danger' if log.urgency in ['High', 'Critical'] else 'badge-warning' if log.urgency == 'Medium' else 'badge-info' }}"
+                            style="font-size:0.7rem;">
+                            {{ log.urgency|clean }} Urgency
+                        </span>
+                        {% if log.image %}
+                        <a href="/{{ log.image }}" target="_blank"
+                            style="font-size: 0.75rem; color: var(--primary); text-decoration: underline; margin-left: 6px;">Photo</a>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div><strong style="color:var(--text);">Tech:</strong> {{ log.technician_name|clean or 'Unassigned' }}</div>
+                        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">By: {{ log.reporter_name|clean or 'Unknown' }}</div>
+                    </td>
+                    <td style="max-width: 280px; font-weight: 500; color: var(--text);">
+                        {{ log.action_taken|clean if log.action_taken else 'Resolved by maintenance team' }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                        No repair records found for the selected criteria.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    </form>
+</div>
+
+<script>
+function toggleAllLogCheckboxes(selectAll) {
+    var checkboxes = document.querySelectorAll('.log-checkbox');
+    for (var i = 0; i < checkboxes.length; i++) {
+        checkboxes[i].checked = selectAll.checked;
+    }
+    updateDeleteCount();
+}
+
+function updateDeleteCount() {
+    var checked = document.querySelectorAll('.log-checkbox:checked');
+    var btn = document.getElementById('deleteSelectedBtn');
+    var countEl = document.getElementById('deleteCount');
+    if (!btn) return;
+    countEl.textContent = checked.length;
+    btn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
+
+    var selectAll = document.getElementById('selectAllLogs');
+    var total = document.querySelectorAll('.log-checkbox');
+    if (selectAll) {
+        selectAll.checked = total.length > 0 && checked.length === total.length;
+    }
+}
+</script>
+{% endblock %}

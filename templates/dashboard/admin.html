@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+{% block content %}
+
+<!-- Top KPI Summary Cards -->
+<div class="grid" style="margin-bottom: 24px;">
+    <div class="stat-card">
+        <h3>System Users</h3>
+        <strong>{{ total_users }}</strong>
+        <p style="margin:4px 0 0;font-size:0.8rem;color:var(--text-muted);">Active accounts</p>
+    </div>
+    <div class="stat-card">
+        <h3>Total Equipment Assets</h3>
+        <strong>{{ total_equipment }}</strong>
+        <p style="margin:4px 0 0;font-size:0.8rem;color:var(--text-muted);">Inventory stocks</p>
+    </div>
+    <div class="stat-card">
+        <h3>Maintenance Requests</h3>
+        <strong>{{ total_req }}</strong>
+        <p style="margin:4px 0 0;font-size:0.8rem;color:var(--text-muted);">
+            <span style="color:var(--danger, #ef4444);font-weight:600;">{{ pending_req }} pending</span> &middot;
+            <span style="color:var(--warning, #f59e0b);font-weight:600;">{{ inprogress_req }} in progress</span>
+        </p>
+    </div>
+    <div class="stat-card">
+        <h3>Performance Metrics</h3>
+        <strong style="font-size:1.3rem;">{{ avg_resp }}h <span style="font-size:0.85rem;font-weight:500;color:var(--text-muted);">resp</span> / {{ avg_res }}h <span style="font-size:0.85rem;font-weight:500;color:var(--text-muted);">res</span></strong>
+        <p style="margin:4px 0 0;font-size:0.8rem;color:var(--text-muted);">Peak failure: <strong>{{ peak_hour_str }}</strong></p>
+    </div>
+</div>
+
+<!-- Administration Quick Actions -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header">
+        <h2>Institutional Management Tools</h2>
+    </div>
+    <div class="btn-row">
+        <a class="btn" href="{{ url_for('user_mgmt.index') }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            User Management
+        </a>
+        <a class="btn secondary" href="{{ url_for('reports.index') }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Advanced Reports &amp; Analytics
+        </a>
+        <a class="btn secondary" href="{{ url_for('equipment.index') }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Equipment Inventory
+        </a>
+        <a class="btn secondary" href="{{ url_for('requests.index') }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Review Requests
+        </a>
+        <a class="btn secondary" href="{{ url_for('logbook.index') }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Repair Logbook
+        </a>
+        <a class="btn secondary" href="{{ url_for('scan.camera') }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Scan QR Code
+        </a>
+    </div>
+</div>
+
+<!-- Visual Analytics Charts -->
+<div class="grid" style="align-items: start; margin-bottom: 24px;">
+    <div class="card">
+        <div class="card-header">
+            <h2>Maintenance Requests Trend</h2>
+            <p style="font-size:0.85rem;color:var(--text-muted);">Monthly volume of reported issues</p>
+        </div>
+        <canvas id="reqChart" style="max-height: 260px;"></canvas>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <h2>Equipment Status Distribution</h2>
+            <p style="font-size:0.85rem;color:var(--text-muted);">Current operational condition</p>
+        </div>
+        <canvas id="statusChart" style="max-height: 260px;"></canvas>
+    </div>
+</div>
+
+<script id="chart-data" type="application/json">
+{
+    "mLabels": {{ monthly|map(attribute='_id')|list|tojson|safe }},
+    "mData": {{ monthly|map(attribute='total')|list|tojson|safe }},
+    "sLabels": {{ status_dist|map(attribute='_id')|list|tojson|safe }},
+    "sData": {{ status_dist|map(attribute='count')|list|tojson|safe }}
+}
+</script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const dataElement = document.getElementById("chart-data");
+        if (!dataElement) return;
+        
+        let chartData = {};
+        try {
+            chartData = JSON.parse(dataElement.textContent || "{}");
+        } catch (e) {
+            console.error("Failed to parse chart data JSON", e);
+        }
+
+        const mLabels = chartData.mLabels || [];
+        const mData = chartData.mData || [];
+        const sLabels = chartData.sLabels || [];
+        const sData = chartData.sData || [];
+        
+        const chartLegendPos = window.matchMedia("(max-width: 768px)").matches ? "bottom" : "right";
+
+        const reqCanvas = document.getElementById("reqChart");
+        if (reqCanvas) {
+            new Chart(reqCanvas, {
+                type: "bar",
+                data: {
+                    labels: mLabels.length ? mLabels : ["No data"],
+                    datasets: [{
+                        label: "Requests",
+                        data: mData.length ? mData : [0],
+                        backgroundColor: "rgba(37, 99, 235, 0.8)",
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+        }
+
+        const statusCanvas = document.getElementById("statusChart");
+        if (statusCanvas) {
+            const statusColorMap = {
+                "Working": "#10b981",              // Emerald Green
+                "Resolved": "#10b981",             // Emerald Green
+                "Under Repair": "#f59e0b",         // Amber / Yellow
+                "Under Maintenance": "#f59e0b",    // Amber / Yellow
+                "In Progress": "#f59e0b",          // Amber
+                "Pending": "#f59e0b",              // Amber
+                "Not Working": "#ef4444",          // Red
+                "Damaged": "#ef4444",              // Red
+                "Rejected": "#ef4444"              // Red
+            };
+            const sColors = sLabels.map(l => statusColorMap[l] || "#64748b");
+
+            new Chart(statusCanvas, {
+                type: "doughnut",
+                data: {
+                    labels: sLabels.length ? sLabels : ["No data"],
+                    datasets: [{
+                        data: sData.length ? sData : [1],
+                        backgroundColor: sColors.length ? sColors : ["#10b981"]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: chartLegendPos } },
+                    cutout: "68%"
+                }
+            });
+        }
+    });
+</script>
+
+<!-- ─── Active Work Tracker: Hardware Under Repair ─── -->
+<div class="card" style="margin-bottom: 24px;">
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h2 style="display:flex; align-items:center; gap:8px;">
+                <span style="width:10px; height:10px; border-radius:50%; background:#f59e0b; display:inline-block; box-shadow:0 0 0 3px rgba(245,158,11,0.25);"></span>
+                Active Work Tracker — Hardware Under Repair
+            </h2>
+            <p style="font-size:0.85rem; color:var(--text-muted); margin-top:2px;">Live monitoring of hardware assets currently being serviced across laboratories</p>
+        </div>
+        <span class="badge badge-warning" style="font-size:0.8rem; font-weight:700;">{{ under_repair_items|length }} active job{{ 's' if under_repair_items|length != 1 else '' }}</span>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Equipment Name</th>
+                    <th>Category</th>
+                    <th>Designated Laboratory</th>
+                    <th>Affected Part</th>
+                    <th>Assigned Technician</th>
+                    <th>Service Duration</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in under_repair_items %}
+                <tr>
+                    <td>
+                        <strong>{{ item.equipment_name|clean }}</strong>
+                    </td>
+                    <td><span class="badge badge-info" style="font-size:0.72rem;">{{ item.equipment_category|clean }}</span></td>
+                    <td><strong>{{ item.equipment_location|clean }}</strong></td>
+                    <td style="font-size:0.84rem; color:var(--text-muted);">{{ item.affected_component|clean or 'General Set' }}</td>
+                    <td>
+                        {% if item.technician_name %}
+                            <span style="font-weight:600; color:var(--text);">{{ item.technician_name|clean }}</span>
+                        {% else %}
+                            <span class="badge badge-danger" style="font-size:0.7rem;">Unassigned</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge badge-warning" style="font-weight:700; font-size:0.75rem;">
+                            {{ item.elapsed_str }} elapsed
+                        </span>
+                    </td>
+                    <td style="text-align:right;">
+                        <a href="{{ url_for('requests.index') }}" class="btn secondary btn-sm" style="padding:4px 9px; font-size:0.75rem;">
+                            View Ticket &rarr;
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:28px; color:var(--text-muted);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; margin:0 auto 8px; color:#10b981;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        All equipment assets are operational. No active hardware under repair at this time.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ─── Monthly Technician Metrics & Problematic Hardware Watchlist ─── -->
+<div class="grid" style="align-items: start; margin-bottom: 24px;">
+    <!-- Monthly Technician Metrics (Assigned vs Completed) -->
+    <div class="card">
+        <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <h2>Monthly Technician Metrics ({{ current_month_label }})</h2>
+                <p style="font-size:0.85rem; color:var(--text-muted);">Assigned workload vs. completed repairs for current month</p>
+            </div>
+            <a href="{{ url_for('reports.index') }}" class="btn secondary btn-sm" style="font-size:0.75rem;">Full Report</a>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Technician</th>
+                        <th style="text-align:center;">Assigned</th>
+                        <th style="text-align:center;">Completed</th>
+                        <th style="text-align:center;">In Progress</th>
+                        <th style="text-align:right;">Turnaround</th>
+                        <th style="text-align:right;">Completion Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tw in technician_workload %}
+                    <tr>
+                        <td>
+                            <strong>{{ tw.technician_name|clean }}</strong>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">{{ tw.technician_email|clean }}</div>
+                        </td>
+                        <td style="text-align:center; font-weight:600;">{{ tw.month_assigned }}</td>
+                        <td style="text-align:center;">
+                            <span class="badge badge-success" style="font-weight:700;">{{ tw.month_completed }}</span>
+                        </td>
+                        <td style="text-align:center;">
+                            {% if tw.active_in_progress > 0 %}
+                                <span class="badge badge-warning">{{ tw.active_in_progress }}</span>
+                            {% else %}
+                                <span style="color:var(--text-muted); font-size:0.8rem;">0</span>
+                            {% endif %}
+                        </td>
+                        <td style="text-align:right; font-size:0.82rem;">{{ tw.avg_duration_str }}</td>
+                        <td style="text-align:right;">
+                            <strong style="color:{% if tw.efficiency_rate >= 80 %}var(--success, #10b981){% elif tw.efficiency_rate >= 50 %}var(--warning, #f59e0b){% else %}var(--danger, #ef4444){% endif %};">
+                                {{ tw.efficiency_rate }}%
+                            </strong>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px;">No technician accounts registered.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Problematic Hardware Watchlist -->
+    <div class="card">
+        <div class="card-header">
+            <h2 style="display:flex; align-items:center; gap:8px;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#ef4444;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                Problematic Hardware Watchlist
+            </h2>
+            <p style="font-size:0.85rem; color:var(--text-muted);">Devices flagged for high failure frequencies</p>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Hardware Asset</th>
+                        <th>Laboratory</th>
+                        <th style="text-align:center;">Failures</th>
+                        <th>Recurring Issue / Part</th>
+                        <th style="text-align:right;">Risk Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pd in problematic_devices %}
+                    <tr>
+                        <td>
+                            <strong>{{ pd.name|clean }}</strong>
+                            <div style="font-size:0.75rem; color:var(--text-muted);">{{ pd.category|clean }}</div>
+                        </td>
+                        <td><strong>{{ pd.location|clean }}</strong></td>
+                        <td style="text-align:center;">
+                            <span class="{{ pd.badge_class }}" style="font-weight:800; font-size:0.8rem;">
+                                {{ pd.failure_count }} &times;
+                            </span>
+                        </td>
+                        <td style="font-size:0.8rem; max-width:160px;">
+                            {{ pd.recurring_parts|clean if pd.recurring_parts else 'Multiple parts' }}
+                        </td>
+                        <td style="text-align:right;">
+                            <span class="{{ pd.badge_class }}">{{ pd.risk_level }}</span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align:center; color:var(--text-muted); padding:24px;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:block; margin:0 auto 6px; color:#10b981;"><polyline points="20 6 9 17 4 12"/></svg>
+                            No high-failure hardware devices detected. All equipment stability within normal thresholds.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Lower Detail Grids -->
+<div class="grid" style="align-items: start;">
+    <!-- Recent Activity Log -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Recent Audit &amp; Activity Log</h2>
+            <p style="font-size:0.85rem;color:var(--text-muted);">Real-time security and operations journal</p>
+        </div>
+        <div class="table-wrap table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Action</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for entry in activity_logs %}
+                    <tr>
+                        <td style="white-space:nowrap;font-size:0.82rem;">{{ entry.created_at }}</td>
+                        <td><span class="badge badge-info">{{ entry.action|clean }}</span></td>
+                        <td style="font-size:0.84rem;">{{ entry.details|clean if entry.details else '&mdash;' }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="3" style="text-align:center;color:var(--text-muted);padding:24px;">No system activity recorded yet.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Top Reported Equipment -->
+    <div class="card">
+        <div class="card-header">
+            <h2>Top Reported Equipment</h2>
+            <p style="font-size:0.85rem;color:var(--text-muted);">Frequent repair incident triggers</p>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Equipment Name</th>
+                        <th style="text-align:right;">Incident Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for row in damaged_top %}
+                    <tr>
+                        <td><strong>{{ row.name|clean }}</strong></td>
+                        <td style="text-align:right;"><span class="badge badge-warning">{{ row.hits }} report{{ 's' if row.hits != 1 else '' }}</span></td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:24px;">No recurring equipment incidents recorded.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

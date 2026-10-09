@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="grid" style="margin-bottom:24px;">
+    <div class="stat-card">
+        <h3>Total Equipment Stocks</h3>
+        <strong>{{ total_eq }}</strong>
+    </div>
+    <div class="stat-card">
+        <h3>QR Codes Generated</h3>
+        <strong>{{ with_qr|length }} <span style="font-size:1rem;font-weight:500;color:var(--text-muted);">/ {{ total_eq }}</span></strong>
+    </div>
+    <div class="stat-card">
+        <h3>Items Missing QR</h3>
+        <strong>{{ without_qr|length }}</strong>
+    </div>
+    <div class="stat-card">
+        <h3>Status Breakdown</h3>
+        {% for s in status_rows %}
+            <p style="margin:4px 0;font-size:0.85rem;display:flex;align-items:center;gap:8px;">
+                <span class="{{ status_badge(s._id) }}">{{ s._id|clean }}</span>
+                <span>{{ s.total }}</span>
+            </p>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>Supply Officer Quick Actions</h2>
+    </div>
+    <div class="btn-row">
+        <a class="btn" href="{{ url_for('equipment.index') }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            Add / Edit Equipment
+        </a>
+        <a class="btn secondary" href="{{ url_for('qr.print_sheet') }}" target="_blank">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print All QR Codes
+        </a>
+        <a class="btn secondary" href="{{ url_for('scan.camera') }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Scan QR Code
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2>QR Code Labels</h2>
+            <p style="margin-top:4px;font-size:0.85rem;">Download or print QR labels to attach to physical equipment.</p>
+        </div>
+        {% if with_qr %}
+        <div class="btn-row" style="margin:0;">
+            <a class="btn" href="{{ url_for('qr.print_sheet') }}" target="_blank">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Print All QR Codes
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if without_qr %}
+    <div class="alert" style="background:var(--bg-accent);color:var(--text);border-left:4px solid var(--warning);border-radius:var(--radius);padding:12px 16px;margin-bottom:20px;font-size:0.88rem;">
+        <strong>{{ without_qr|length }} item{% if without_qr|length > 1 %}s{% endif %}</strong> missing a QR code.
+        <a href="{{ url_for('equipment.index') }}" style="color:var(--primary);font-weight:600;margin-left:6px;">Edit &amp; save them</a> to auto-generate.
+    </div>
+    {% endif %}
+
+    {% if not with_qr %}
+    <div style="text-align:center;padding:40px 20px;color:var(--text-muted);">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 16px;display:block;opacity:0.4;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        <p style="font-weight:600;font-size:1rem;color:var(--text);">No QR codes yet</p>
+        <p style="font-size:0.88rem;margin-top:4px;">Add equipment using the form — QR codes are generated automatically on save.</p>
+        <a class="btn" style="margin-top:16px;display:inline-flex;" href="{{ url_for('equipment.index') }}">Add First Equipment</a>
+    </div>
+    {% else %}
+    
+    <div id="qrGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;">
+        {% for eq in with_qr %}
+        <div class="qr-card-item" style="display:{% if loop.index > 8 %}none{% else %}block{% endif %};background:var(--bg-accent);border:1px solid var(--line);border-radius:10px;padding:16px;text-align:center;">
+            
+            <img src="{{ eq.qr_code }}"
+                 width="120" height="120"
+                 style="display:block;margin:0 auto 10px;border-radius:6px;border:1px solid var(--line);background:#fff;object-fit:contain;"
+                 alt="QR — {{ eq.name|clean }}">
+            <div style="font-size:0.88rem;font-weight:700;color:var(--text);margin-bottom:2px;word-break:break-word;">{{ eq.name|clean }}</div>
+            <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:12px;">{{ eq.category|clean }}{% if eq.category and eq.location %} &middot; {% endif %}{{ eq.location|clean }}</div>
+            <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+                <a href="{{ url_for('qr.download', equipment_id=eq.id|string) }}"
+                   class="btn btn-sm"
+                   title="Download QR as PNG">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download
+                </a>
+                <a href="{{ url_for('qr.print_sheet', ids=eq.id|string) }}"
+                   class="btn secondary btn-sm"
+                   target="_blank"
+                   title="Print this QR code">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    Print
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% if with_qr|length > 8 %}
+    <div style="text-align:center;margin-top:24px;">
+        <button type="button" class="btn secondary" id="qrToggleBtn" onclick="toggleQR(this, {{ with_qr|length }})" data-expanded="false">View All {{ with_qr|length }} QR Codes</button>
+    </div>
+    <script>
+    function toggleQR(btn, total) {
+        const items = document.querySelectorAll('.qr-card-item');
+        if (btn.dataset.expanded === 'true') {
+            items.forEach((el, i) => { if (i >= 8) el.style.display = 'none'; });
+            btn.dataset.expanded = 'false';
+            btn.innerText = 'View All ' + total + ' QR Codes';
+        } else {
+            items.forEach(el => el.style.display = 'block');
+            btn.dataset.expanded = 'true';
+            btn.innerText = 'Hide QR Codes';
+        }
+    }
+    </script>
+    {% endif %}
+    {% endif %}
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>Equipment Overview</h2>
+        <a class="btn secondary btn-sm" href="{{ url_for('equipment.index') }}">Manage All</a>
+    </div>
+    <input class="table-search" id="searchEq" type="search" placeholder="Search equipment…" onkeyup="filterTable('searchEq', 'eqTable')">
+    <div class="table-wrap">
+    <table id="eqTable">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>QR</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for eq in equipment %}
+        <tr>
+            <td>{{ eq.name|clean }}</td>
+            <td>{{ eq.category|clean }}</td>
+            <td>{{ eq.location|clean }}</td>
+            <td><span class="{{ status_badge(eq.status) }}">{{ eq.status|clean }}</span></td>
+            <td>
+                {% if eq.qr_code %}
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <img src="{{ eq.qr_code }}" width="40" height="40"
+                             style="border-radius:4px;border:1px solid var(--line);background:#fff;" alt="QR">
+                        <a href="{{ url_for('qr.download', equipment_id=eq.id|string) }}"
+                           class="btn secondary btn-sm" title="Download QR">↓</a>
+                    </div>
+                {% else %}
+                    <a href="{{ url_for('equipment.index', edit=eq.id|string) }}"
+                       class="btn secondary btn-sm">Generate</a>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}

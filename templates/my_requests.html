@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header"><h2>Submission history</h2></div>
+    <div class="table-wrap">
+    <table><thead><tr><th>Date Reported</th><th>Equipment</th><th>Issue Description</th><th>Urgency</th><th>Status</th><th>Assigned Technician</th></tr></thead><tbody>
+    {% for r in rows %}
+      <tr>
+        <td>{{ format_date(r.date_reported) }}</td>
+        <td>
+            <strong>{{ (r.equipment_name or 'Deleted')|clean }}</strong>
+            {% if r.affected_component %}
+            <br><span style="font-size:0.75rem;color:var(--primary);font-weight:600;margin-top:2px;display:inline-block;">Part: {{ r.affected_component|clean }}</span>
+            {% endif %}
+        </td>
+        <td>{{ r.description|clean }}</td>
+        <td>{{ r.urgency|clean }}</td>
+        <td><span class="{{ status_badge(r.status) }}">{{ r.status|clean }}</span></td>
+        <td>
+            {% if r.technician_name %}
+                <span class="badge badge-info" style="font-size:0.8rem;">{{ r.technician_name|clean }}</span>
+            {% else %}
+                <span class="badge" style="background:var(--bg-accent);color:var(--text-muted);border:1px solid var(--line);">Queued for Assignment</span>
+            {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted);">You haven't submitted any maintenance requests yet.</td></tr>
+    {% endfor %}
+    </tbody></table>
+    </div>
+</div>
+{% endblock %}

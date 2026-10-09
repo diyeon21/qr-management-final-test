@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block head %}
+<style>
+/* Urgency chips */
+.urgency-chip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 18px;
+    border: 2px solid #e5e7eb;
+    border-radius: 50px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.18s;
+    user-select: none;
+    background: transparent;
+}
+.urgency-chip:hover {
+    background: rgba(21, 71, 160, 0.05);
+    border-color: #1547a0;
+}
+.urgency-chip input[type="radio"] {
+    display: none;
+}
+.urgency-chip.chip-low   { border-color: rgba(16, 185, 129, 0.3); }
+.urgency-chip.chip-medium{ border-color: rgba(245, 158, 11, 0.3); }
+.urgency-chip.chip-high  { border-color: rgba(239, 68, 68, 0.3); }
+.urgency-chip.chip-active {
+    background: rgba(21, 71, 160, 0.09);
+    border-color: #1547a0;
+    color: #1547a0;
+}
+/* Drop zone */
+#dropZone {
+    border: 2px dashed #d1d5db;
+    border-radius: 12px;
+    padding: 28px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+}
+#dropZone:hover,
+#dropZone.drag-over {
+    border-color: #1547a0;
+    background: rgba(21, 71, 160, 0.04);
+}
+.form-group textarea {
+    min-height: 100px;
+    width: 100%;
+    resize: vertical;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+.alert-success {
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    color: #065f46;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 18px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+}
+.alert-error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #991b1b;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin: 18px 0 0;
+}
+.note-banner {
+    background: rgba(21, 71, 160, 0.08);
+    border-left: 4px solid #1547a0;
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin-bottom: 24px;
+    font-size: 0.85rem;
+    color: #374151;
+}
+.eq-info-box {
+    display: none;
+    margin-top: 8px;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 680px; margin: 0 auto;">
+    <div class="card-header">
+        <h2 style="margin:0;">Manual Issue Report</h2>
+        <p style="margin:4px 0 0; font-size:0.85rem; color:var(--text-muted);">
+            Use this form when a camera is broken, blurry, or unavailable to scan a QR code.
+        </p>
+    </div>
+
+    {% if success %}
+    <div class="alert-success">
+        Issue report submitted successfully. It has been added to the maintenance queue.
+    </div>
+    {% endif %}
+
+    {% if errors %}
+    <div class="alert-error">
+        <strong style="display:block; margin-bottom:6px;">Please fix the following:</strong>
+        <ul style="margin:0; padding-left:18px;">
+            {% for e in errors %}<li>{{ e }}</li>{% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" style="margin-top:24px;" id="manualReportForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <!-- Equipment -->
+        <div class="form-group" style="margin-bottom:18px;">
+            <label for="equipment_id" style="display:block; font-weight:600; margin-bottom:6px;">
+                Equipment <span style="color:#ef4444;">*</span>
+            </label>
+            <select name="equipment_id" id="equipment_id" required style="width:100%;"
+                    onchange="updateEquipmentInfo(this)">
+                <option value="">— Select equipment —</option>
+                {% for eq in equipment_list %}
+                <option value="{{ eq.id }}"
+                        data-category="{{ eq.category or '' }}"
+                        data-location="{{ eq.location or '' }}"
+                        {% if (form.get('equipment_id') or '')|string == eq.id|string %}selected{% endif %}>
+                    {{ eq.name|clean }}{% if eq.category %} · {{ eq.category|clean }}{% endif %}{% if eq.location %} ({{ eq.location|clean }}){% endif %}
+                </option>
+                {% endfor %}
+            </select>
+            <div id="equipmentInfo" class="eq-info-box">
+                <strong>Category:</strong> <span id="infoCategory">—</span> &nbsp;|&nbsp;
+                <strong>Location:</strong> <span id="infoLocation">—</span>
+            </div>
+        </div>
+
+        <div style="margin-bottom:18px; padding:14px 18px; background:rgba(21,71,160,0.05); border:1px solid rgba(21,71,160,0.15); border-radius:10px; font-size:0.82rem; color:var(--text-muted); line-height:1.7;">
+            <strong style="color:var(--text); display:block; margin-bottom:6px;">Category Guide</strong>
+            <strong>Desktop Workstation</strong> — Covers full set: PC, Monitor, Keyboard, Mouse, AVR<br>
+            <strong>Multimedia & Display</strong> — Projectors, Smart TVs, Speakers<br>
+            <strong>Networking & Power</strong> — Routers, Switches, Standalone UPS<br>
+            <strong>Peripherals & Office</strong> — Printers, Scanners
+        </div>
+
+        <!-- Affected Component -->
+        <div class="form-group" style="margin-bottom:18px;">
+            <label for="affected_component" style="display:block; font-weight:600; margin-bottom:6px;">
+                Affected Component / Part
+            </label>
+            <select name="affected_component" id="affected_component" style="width:100%;">
+                <option value="Entire Workstation / Set">Entire Workstation / Set</option>
+                <option value="PC Tower / CPU">PC Tower / CPU</option>
+                <option value="Monitor / Screen">Monitor / Screen</option>
+                <option value="Keyboard">Keyboard</option>
+                <option value="Mouse">Mouse</option>
+                <option value="AVR / Power Supply">AVR / Power Supply</option>
+                <option value="Other Component">Other Component</option>
+            </select>
+        </div>
+
+        <!-- Description -->
+        <div class="form-group" style="margin-bottom:18px;">
+            <label for="description" style="display:block; font-weight:600; margin-bottom:6px;">
+                Issue Description <span style="color:#ef4444;">*</span>
+            </label>
+            <textarea name="description" id="description" rows="4" required
+                      placeholder="Describe the issue in detail (e.g. camera is blurry, projector not turning on, etc.)">{{ form.get('description') or '' }}</textarea>
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;" id="charCount">0 / 500 characters</div>
+        </div>
+
+        <!-- Urgency -->
+        <div class="form-group" style="margin-bottom:18px;">
+            <label style="display:block; font-weight:600; margin-bottom:8px;">
+                Urgency Level <span style="color:#ef4444;">*</span>
+            </label>
+            {% set selected_urgency = form.get('urgency') or 'Medium' %}
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <label class="urgency-chip chip-low {% if selected_urgency == 'Low' %}chip-active{% endif %}">
+                    <input type="radio" name="urgency" value="Low" {% if selected_urgency == 'Low' %}checked{% endif %}>
+                    <span>Low</span>
+                </label>
+                <label class="urgency-chip chip-medium {% if selected_urgency == 'Medium' %}chip-active{% endif %}">
+                    <input type="radio" name="urgency" value="Medium" {% if selected_urgency == 'Medium' %}checked{% endif %}>
+                    <span>Medium</span>
+                </label>
+                <label class="urgency-chip chip-high {% if selected_urgency == 'High' %}chip-active{% endif %}">
+                    <input type="radio" name="urgency" value="High" {% if selected_urgency == 'High' %}checked{% endif %}>
+                    <span>High</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Image (optional) -->
+        <div class="form-group" style="margin-bottom:24px;">
+            <label for="image" style="display:block; font-weight:600; margin-bottom:6px;">
+                Photo Evidence <span style="font-weight:400; color:var(--text-muted);">(optional)</span>
+            </label>
+            <div id="dropZone" onclick="document.getElementById('image').click()">
+                <div id="dropContent">
+                    <p style="margin:0 0 4px; font-weight:500; color:var(--text-muted);">
+                        Click or drag and drop a photo here
+                    </p>
+                    <p style="margin:0; font-size:0.78rem; color:var(--text-muted);">
+                        PNG, JPG, GIF, WEBP — max 10 MB
+                    </p>
+                </div>
+                <div id="imagePreviewWrap" style="display:none; margin-top:12px;">
+                    <img id="imagePreview" src="" alt="Preview"
+                         style="max-height:180px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.15);">
+                    <p id="imageFilename" style="margin:8px 0 0; font-size:0.8rem; color:var(--text-muted);"></p>
+                    <button type="button" onclick="clearImage(event)"
+                            style="margin-top:6px; font-size:0.8rem; color:#ef4444; background:none; border:none; cursor:pointer;">
+                        ✕ Remove photo
+                    </button>
+                </div>
+                <input type="file" name="image" id="image" accept="image/*"
+                       style="display:none;" onchange="previewImage(this)">
+            </div>
+        </div>
+
+        <!-- Note banner -->
+        <div class="note-banner">
+            <strong>Note:</strong> Use this form when a camera is broken, blurry, or glitchy and you
+            can't scan the QR code. The report will be filed as <em>Pending</em> and appear in the
+            maintenance queue immediately, logged as submitted by <strong>{{ user.name }}</strong>.
+        </div>
+
+        <div class="btn-row">
+            <button type="submit" class="btn" id="submitBtn">
+                <span id="submitLabel">Submit Report</span>
+            </button>
+            <a class="btn secondary" href="{{ url_for('dashboard.' ~ user.role) if user and user.role else url_for('auth.login') }}">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function updateEquipmentInfo(sel) {
+    var opt  = sel.options[sel.selectedIndex];
+    var info = document.getElementById('equipmentInfo');
+    if (!opt.value) { info.style.display = 'none'; return; }
+    document.getElementById('infoCategory').textContent = opt.dataset.category || '—';
+    document.getElementById('infoLocation').textContent = opt.dataset.location || '—';
+    info.style.display = 'block';
+}
+
+window.addEventListener('DOMContentLoaded', function () {
+    var sel = document.getElementById('equipment_id');
+    if (sel.value) { updateEquipmentInfo(sel); }
+
+    var desc = document.getElementById('description');
+    var cc   = document.getElementById('charCount');
+    function updateCount() { cc.textContent = desc.value.length + ' / 500 characters'; }
+    desc.addEventListener('input', updateCount);
+    updateCount();
+
+    // Drag & drop
+    var dz = document.getElementById('dropZone');
+    dz.addEventListener('dragover', function (e) { e.preventDefault(); dz.classList.add('drag-over'); });
+    dz.addEventListener('dragleave', function () { dz.classList.remove('drag-over'); });
+    dz.addEventListener('drop', function (e) {
+        e.preventDefault();
+        dz.classList.remove('drag-over');
+        var dt = e.dataTransfer;
+        if (dt && dt.files.length) {
+            var inp = document.getElementById('image');
+            inp.files = dt.files;
+            previewImage(inp);
+        }
+    });
+
+    // Urgency chip JS highlight (for browsers without :has() support)
+    document.querySelectorAll('.urgency-chip input[type="radio"]').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            document.querySelectorAll('.urgency-chip').forEach(function (chip) {
+                chip.classList.remove('chip-active');
+            });
+            if (this.checked) { this.closest('.urgency-chip').classList.add('chip-active'); }
+        });
+    });
+
+    // Submit button state
+    document.getElementById('manualReportForm').addEventListener('submit', function () {
+        document.getElementById('submitLabel').textContent = 'Submitting\u2026';
+        document.getElementById('submitBtn').disabled = true;
+    });
+});
+
+function previewImage(input) {
+    var file = input.files[0];
+    if (!file) { return; }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+        document.getElementById('imagePreview').src = e.target.result;
+        document.getElementById('imageFilename').textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
+        document.getElementById('dropContent').style.display = 'none';
+        document.getElementById('imagePreviewWrap').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearImage(e) {
+    e.stopPropagation();
+    var inp = document.getElementById('image');
+    inp.value = '';
+    document.getElementById('dropContent').style.display = 'block';
+    document.getElementById('imagePreviewWrap').style.display = 'none';
+}
+</script>
+{% endblock %}

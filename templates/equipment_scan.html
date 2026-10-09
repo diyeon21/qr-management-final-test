@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <h2>{{ equipment.name|clean }}</h2>
+            <span class="{{ status_badge(equipment.status) }}">{{ equipment.status|clean }}</span>
+        </div>
+        <div>
+            <a class="btn secondary btn-sm" href="{{ url_for('dashboard.' ~ user.role) if user and user.role else url_for('auth.login') }}" onclick="if (window.history.length > 1) { window.history.back(); return false; }" style="display:inline-flex;align-items:center;gap:6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+                Back
+            </a>
+        </div>
+    </div>
+    <div class="grid">
+        <div class="stat-card">
+            <h3>Category</h3>
+            <strong style="font-size:1.1rem;">{{ equipment.category|clean or '—' }}</strong>
+        </div>
+        <div class="stat-card">
+            <h3>Location</h3>
+            <strong style="font-size:1.1rem;">{{ equipment.location|clean or '—' }}</strong>
+        </div>
+    </div>
+    {% if equipment.qr_code %}
+    <p style="margin-top:16px;font-size:0.85rem;color:var(--text-muted);">Asset QR label</p>
+    <img src="{{ equipment.qr_code }}" width="120" height="120" alt="QR code"
+         style="border-radius:8px;border:1px solid var(--line);background:#fff;display:block;margin-top:8px;">
+    {% endif %}
+
+    <div style="margin-top:18px; padding:14px 18px; background:rgba(21,71,160,0.05); border:1px solid rgba(21,71,160,0.15); border-radius:10px; font-size:0.82rem; color:var(--text-muted); line-height:1.7;">
+        <strong style="color:var(--text); display:block; margin-bottom:6px;">Category Guide</strong>
+        <strong>Desktop Workstation</strong> — Covers full set: PC, Monitor, Keyboard, Mouse, AVR<br>
+        <strong>Multimedia & Display</strong> — Projectors, Smart TVs, Speakers<br>
+        <strong>Networking & Power</strong> — Routers, Switches, Standalone UPS<br>
+        <strong>Peripherals & Office</strong> — Printers, Scanners
+    </div>
+</div>
+
+{% if can_edit %}
+<div class="card">
+    <div class="card-header"><h2>Edit equipment</h2></div>
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row-2">
+            <div><label>Equipment Name</label><input name="name" required value="{{ equipment.name|clean }}"></div>
+            <div><label>Category</label>
+                <select name="category" required>
+                    <option value="" disabled {{ 'selected' if not equipment.category else '' }}>Select Category</option>
+                    {% set categories = ['Desktop Workstation', 'Multimedia & Display', 'Networking & Power', 'Peripherals & Office'] %}
+                    {% for cat in categories %}
+                        <option value="{{ cat }}" {{ 'selected' if equipment.category == cat else '' }}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div><label>Location</label>
+                <select name="location" required>
+                    <option value="" disabled {{ 'selected' if not equipment.location else '' }}>Select Location</option>
+                    {% for lab_num in range(1, 8) %}
+                        {% set lab_name = 'Laboratory ' ~ lab_num %}
+                        <option value="{{ lab_name }}" {{ 'selected' if equipment.location == lab_name else '' }}>{{ lab_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div><label>Status</label>
+                <select name="status">
+                    {% for st in ['Working', 'Under Repair', 'Not Working'] %}
+                        <option value="{{ st }}" {{ 'selected' if equipment.status == st else '' }}>{{ st }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <button type="submit">Save changes</button>
+    </form>
+
+    <div style="margin-top:18px; padding:14px 18px; background:rgba(21,71,160,0.05); border:1px solid rgba(21,71,160,0.15); border-radius:10px; font-size:0.82rem; color:var(--text-muted); line-height:1.7;">
+        <strong style="color:var(--text); display:block; margin-bottom:6px;">Category Guide</strong>
+        <strong>Desktop Workstation</strong> — Covers full set: PC, Monitor, Keyboard, Mouse, AVR<br>
+        <strong>Multimedia & Display</strong> — Projectors, Smart TVs, Speakers<br>
+        <strong>Networking & Power</strong> — Routers, Switches, Standalone UPS<br>
+        <strong>Peripherals & Office</strong> — Printers, Scanners
+    </div>
+
+    <div class="btn-row" style="margin-top:12px;">
+        <a class="btn secondary" href="{{ url_for('equipment.index') }}">Full equipment list</a>
+        <a class="btn secondary" href="{{ url_for('scan.camera') }}">Scan another QR</a>
+        <a class="btn secondary" href="{{ url_for('dashboard.' ~ user.role) if user and user.role else url_for('auth.login') }}">Dashboard</a>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-header"><h2>Report an issue</h2></div>
+    {% if report_error %}
+    <div class="alert error">{{ report_error|clean }}</div>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label>Affected Component / Part</label>
+        <select name="affected_component">
+            <option value="Entire Workstation / Set">Entire Workstation / Set</option>
+            <option value="PC Tower / CPU">PC Tower / CPU</option>
+            <option value="Monitor / Screen">Monitor / Screen</option>
+            <option value="Keyboard">Keyboard</option>
+            <option value="Mouse">Mouse</option>
+            <option value="AVR / Power Supply">AVR / Power Supply</option>
+            <option value="Other Component">Other Component</option>
+        </select>
+
+        <label>Issue description</label>
+        <textarea name="description" rows="4" required placeholder="Describe the problem…"></textarea>
+        <label>Urgency</label>
+        <select name="urgency">
+            <option>Low</option>
+            <option selected>Medium</option>
+            <option>High</option>
+            <option>Critical</option>
+        </select>
+        <label>Photo (optional)</label>
+        <input type="file" name="image" accept="image/*" capture="environment">
+        <button type="submit">Submit maintenance request</button>
+    </form>
+    <div class="btn-row" style="margin-top:12px;">
+        <a class="btn secondary" href="{{ url_for('my_req.index') }}">My requests</a>
+        <a class="btn secondary" href="{{ url_for('scan.camera') }}">Scan another QR</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

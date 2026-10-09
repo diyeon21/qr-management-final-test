@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="grid" style="margin-bottom:24px;">
+    <div class="stat-card">
+        <h3>Pending Requests</h3>
+        <strong style="color:var(--danger, #ef4444);">{{ pending_count }}</strong>
+    </div>
+    <div class="stat-card">
+        <h3>In Progress</h3>
+        <strong style="color:var(--warning, #f59e0b);">{{ in_progress_count }}</strong>
+    </div>
+    <div class="stat-card">
+        <h3>Total Repairs Completed</h3>
+        <strong style="color:var(--success, #10b981);">{{ completed_repairs }}</strong>
+    </div>
+    <div class="stat-card">
+        <h3>Total Equipment</h3>
+        <strong>{{ total_equipment }}</strong>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>Technician Quick Actions</h2>
+    </div>
+    <div class="btn-row">
+        <a class="btn" href="{{ url_for('requests.index') }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Review &amp; Resolve Requests ({{ pending_count }} pending)
+        </a>
+        <a class="btn secondary" href="{{ url_for('logbook.index') }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Repair Logbook
+        </a>
+        <a class="btn secondary" href="{{ url_for('equipment.index') }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            View Inventory
+        </a>
+        <a class="btn secondary" href="{{ url_for('scan.camera') }}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Scan QR Code
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h2>Active Maintenance Requests</h2>
+            <p style="margin-top:4px;font-size:0.85rem;color:var(--text-muted);">Requests requiring technician inspection, repair, or resolution.</p>
+        </div>
+        <a class="btn secondary btn-sm" href="{{ url_for('requests.index') }}">Manage All Requests</a>
+    </div>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Equipment</th>
+                <th>Location</th>
+                <th>Reporter</th>
+                <th>Urgency</th>
+                <th>Status</th>
+                <th>Assignment</th>
+                <th>Date Reported</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for req in active_requests %}
+        <tr>
+            <td><strong>{{ req.equipment_name|clean }}</strong></td>
+            <td>{{ req.equipment_location|clean }}</td>
+            <td>{{ req.reporter_name|clean if req.reporter_name else 'Unknown' }}</td>
+            <td>
+                {% if req.urgency == 'Critical' %}
+                    <span class="badge badge-danger">Critical</span>
+                {% elif req.urgency == 'High' %}
+                    <span class="badge badge-warning">High</span>
+                {% elif req.urgency == 'Medium' %}
+                    <span class="badge badge-info">Medium</span>
+                {% else %}
+                    <span class="badge">{{ req.urgency|clean }}</span>
+                {% endif %}
+            </td>
+            <td><span class="{{ status_badge(req.status) }}">{{ req.status|clean }}</span></td>
+            <td>
+                {% if user and req.technician_id == user.id %}
+                    <span class="badge badge-success" style="font-weight:700;">Assigned to You</span>
+                {% elif req.technician_name %}
+                    <span class="badge badge-info">{{ req.technician_name|clean }}</span>
+                {% else %}
+                    <span class="badge" style="background:var(--bg-accent); color:var(--text-muted); border:1px solid var(--line);">Unassigned</span>
+                {% endif %}
+            </td>
+            <td>{{ req.date_reported }}</td>
+            <td>
+                <a class="btn btn-sm" href="{{ url_for('requests.index') }}">Handle</a>
+            </td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="7" style="text-align:center;padding:24px;color:var(--text-muted);">
+                No active maintenance requests! All equipment is running smoothly.
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>Recent Completed Repairs</h2>
+        <a class="btn secondary btn-sm" href="{{ url_for('logbook.index') }}">View Full Logbook</a>
+    </div>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Equipment</th>
+                <th>Reporter</th>
+                <th>Action Taken</th>
+                <th>Date Completed</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for log in recent_logs %}
+        <tr>
+            <td><strong>{{ log.equipment_name|clean }}</strong></td>
+            <td>{{ log.reporter_name|clean if log.reporter_name else 'Unknown' }}</td>
+            <td>{{ log.action_taken|clean }}</td>
+            <td>{{ log.date_completed }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">
+                No repairs logged yet.
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+
+{% endblock %}

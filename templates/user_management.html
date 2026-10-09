@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Create Institutional User Account</h2>
+    </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div style="margin-bottom: 16px;">
+        {% for category, message in messages %}
+        <div class="alert {{ 'error' if category == 'error' else 'info' }}">{{ message|clean }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+    <form method="post" class="row-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div>
+            <label for="u_name">Full Name</label>
+            <input id="u_name" name="name" required placeholder="e.g. Prof. Juan Dela Cruz">
+        </div>
+        <div>
+            <label for="u_email">Institutional Email</label>
+            <input id="u_email" type="email" name="email" required placeholder="name@neust.edu.ph">
+        </div>
+        <div>
+            <label for="u_role">Assigned Role</label>
+            <select id="u_role" name="role">
+                <option value="faculty">Faculty (Reporter)</option>
+                <option value="custodian">Custodian (Supply Officer)</option>
+                <option value="technician">Technician (IT Specialist)</option>
+                <option value="admin">Administrator</option>
+            </select>
+        </div>
+        <div>
+            <label for="u_pwd">Initial Password</label>
+            <input id="u_pwd" type="password" name="password" required minlength="6" placeholder="Minimum 6 characters">
+        </div>
+        <div style="grid-column:1 / -1;margin-top:8px;">
+            <button type="submit" class="btn">Create User Account</button>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>Institutional Database Maintenance</h2>
+    </div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:16px;background:var(--bg-accent);padding:14px 18px;border-radius:10px;border:1px solid var(--line);">
+        <div>
+            <strong style="display:block;font-size:0.9rem;margin-bottom:4px;">Export Database Backup</strong>
+            <a class="btn secondary btn-sm" href="{{ url_for('user_mgmt.backup_db') }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Download .SQL Backup
+            </a>
+        </div>
+        <div style="border-left:1px solid var(--line);padding-left:16px;">
+            <strong style="display:block;font-size:0.9rem;margin-bottom:4px;">Restore From Backup File</strong>
+            <form method="post" action="{{ url_for('user_mgmt.restore_db') }}" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="file" name="backup_file" accept=".sql" required style="font-size:0.82rem;padding:4px;">
+                <button type="submit" class="btn secondary btn-sm" onclick="return confirm('Restoring database will overwrite existing tables. Continue?');">Restore DB</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>Registered Accounts ({{ users|length }})</h2>
+    </div>
+    <div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Date Created</th>
+                <th style="text-align:right;">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for u in users %}
+          <tr>
+            <td><strong>{{ u.name|clean }}</strong></td>
+            <td>{{ u.email|clean }}</td>
+            <td>
+                {% if u.role == 'admin' %}
+                    <span class="badge badge-info">Administrator</span>
+                {% elif u.role == 'technician' %}
+                    <span class="badge badge-warning">Technician</span>
+                {% elif u.role == 'custodian' %}
+                    <span class="badge badge-success">Custodian</span>
+                {% else %}
+                    <span class="badge">Faculty</span>
+                {% endif %}
+            </td>
+            <td style="font-size:0.85rem;">{{ format_date(u.created_at) }}</td>
+            <td style="text-align:right;">
+                {% if u.role != 'admin' %}
+                    <form method="post" action="{{ url_for('user_mgmt.delete_user', user_id=u.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete user \'{{ u.email|clean }}\'?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn danger btn-sm">Delete</button>
+                    </form>
+                {% else %}
+                    <span style="font-size:0.75rem;color:var(--text-muted);">Protected</span>
+                {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}

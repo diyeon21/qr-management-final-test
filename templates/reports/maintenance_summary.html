@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/base.css', v=filemtime('static/css/base.css')) }}">
+{% endblock %}
+{% block content %}
+<h2>Maintenance Summary Dashboard</h2>
+<div class="summary-cards" style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:2rem;">
+  <div class="card" style="flex:1;min-width:200px;padding:1rem;background:#fff;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+    <h3>Total Requests</h3>
+    <p style="font-size:1.5rem;font-weight:bold;">{{ total_requests }}</p>
+  </div>
+  <div class="card" style="flex:1;min-width:200px;padding:1rem;background:#fff;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.1);">
+    <h3>Average Resolution (hrs)</h3>
+    <p style="font-size:1.5rem;font-weight:bold;">{{ avg_resolution|round(2) }}</p>
+  </div>
+</div>
+<h3>Status Breakdown</h3>
+<table class="summary-table" style="width:100%;border-collapse:collapse;">
+  <thead><tr><th>Status</th><th>Count</th></tr></thead>
+  <tbody>
+  {% for row in status_breakdown %}
+    <tr><td><span class="{{ status_badge(row.status) }}">{{ row.status|clean }}</span></td><td>{{ row.cnt }}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<div style="margin-top:2rem;">
+  <a href="{{ url_for('reports.maintenance_summary_csv') }}" class="btn" style="background:#3498db;color:#fff;padding:0.5rem 1rem;border-radius:4px;text-decoration:none;">Export CSV</a>
+</div>
+{% endblock %}

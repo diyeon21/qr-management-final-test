@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>Review &amp; update requests</h2>
+    </div>
+
+    {% if request.args.get('error') == 'action_required' %}
+    <div style="
+        background: rgba(239,68,68,0.1);
+        border: 1px solid rgba(239,68,68,0.35);
+        color: #991b1b;
+        border-radius: 10px;
+        padding: 14px 18px;
+        margin: 12px 0 0;
+    ">
+        <strong>Action required:</strong> You must fill in the "Action taken" field before resolving a request.
+    </div>
+    {% endif %}
+
+    <input class="table-search" id="searchRequests" type="search" placeholder="Search table…"
+        onkeyup="filterTable('searchRequests', 'requestsTable')">
+    <div class="table-wrap">
+        <table id="requestsTable">
+            <thead>
+                <tr>
+                    <th>Equipment</th>
+                    <th>Reporter</th>
+                    <th>Description</th>
+                    <th>Urgency</th>
+                    <th>Status</th>
+                    <th>Assigned Technician</th>
+                    <th>Update Progress</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in rows %}
+                <tr>
+                    <td>
+                        <strong>{{ (r.equipment_name or 'Deleted')|clean }}</strong>
+                        {% if r.affected_component %}
+                        <br><span style="font-size:0.75rem;color:var(--primary);font-weight:600;margin-top:2px;display:inline-block;">Part: {{ r.affected_component|clean }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ (r.reporter_name or 'Unknown')|clean }}</td>
+                    <td>
+                        {{ r.description|clean }}
+                        {% if r.image %}
+                        <br><a href="/{{ r.image }}" target="_blank"
+                            style="font-size: 0.8rem; color: var(--primary); text-decoration: underline; margin-top: 4px; display: inline-block;">View
+                            Photo</a>
+                        {% endif %}
+                    </td>
+                    <td>{{ r.urgency|clean }}</td>
+                    <td><span class="{{ status_badge(r.status) }}">{{ r.status|clean }}</span></td>
+                    <td>
+                        {% if user and user.role == 'admin' %}
+                        <form method="post" action="{{ url_for('requests.assign_technician', request_id=r.id) }}"
+                              style="display:flex; gap:6px; align-items:center; min-width:180px;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <select name="technician_id" style="margin:0; font-size:0.82rem; padding:6px 8px;" onchange="this.form.submit()">
+                                <option value="">-- Unassigned --</option>
+                                {% for t in technicians %}
+                                <option value="{{ t.id }}" {{ 'selected' if r.technician_id == t.id else '' }}>
+                                    {{ t.name|clean }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <noscript><button type="submit" class="btn btn-sm">Assign</button></noscript>
+                        </form>
+                        {% else %}
+                            {% if r.technician_name %}
+                                <span class="badge badge-info" style="font-size:0.8rem; display:inline-flex; align-items:center; gap:5px;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                    {{ r.technician_name|clean }}
+                                    {% if user and user.id == r.technician_id %}<strong style="color:var(--success);">&nbsp;(You)</strong>{% endif %}
+                                </span>
+                            {% else %}
+                                <span class="badge" style="background:var(--bg-accent); color:var(--text-muted); border:1px solid var(--line);">Unassigned</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form method="post" class="request-form"
+                              style="display: flex; flex-direction: column; gap: 8px; min-width: 250px;"
+                              onsubmit="return validateRequestForm(this);">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="request_id" value="{{ r.id }}">
+                            <input type="hidden" name="equipment_id" value="{{ r.equipment_id }}">
+
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <select name="status" data-current="{{ r.status }}" style="margin: 0; flex: 1;">
+                                    <option value="Pending">Pending</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Resolved">Resolved</option>
+                                    <option value="Rejected">Rejected</option>
+                                </select>
+                                <button type="submit" class="btn btn-sm"
+                                    style="margin: 0; white-space: nowrap; height: 100%;">Update</button>
+                            </div>
+
+                            <div class="action-input-group"
+                                style="display: none; gap: 8px; flex-direction: column;">
+                                <input type="text" name="action_taken" placeholder="Action taken (required)"
+                                    style="margin: 0; flex: 1; min-width: 150px;">
+                                <span class="action-error" style="display:none; color:#ef4444; font-size:0.8rem;">
+                                    Please describe the action taken before resolving.
+                                </span>
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+    // Initialize: set selected option and show action field based on current status
+    document.querySelectorAll('select[name="status"]').forEach(function (sel) {
+        var current = sel.getAttribute('data-current');
+        if (current) {
+            sel.value = current;
+        }
+        var actionGroup = sel.closest('form').querySelector('.action-input-group');
+        if (actionGroup && current === 'Resolved') {
+            actionGroup.style.display = 'flex';
+        }
+
+        // Toggle action_taken visibility on status change
+        sel.addEventListener('change', function () {
+            var group = this.closest('form').querySelector('.action-input-group');
+            if (group) {
+                group.style.display = this.value === 'Resolved' ? 'flex' : 'none';
+            }
+            var errorSpan = this.closest('form').querySelector('.action-error');
+            if (errorSpan) { errorSpan.style.display = 'none'; }
+        });
+    });
+
+    // Client-side validation: block submit if Resolved + empty action_taken
+    function validateRequestForm(form) {
+        var statusSel = form.querySelector('select[name="status"]');
+        var actionInput = form.querySelector('input[name="action_taken"]');
+        var errorSpan = form.querySelector('.action-error');
+
+        if (statusSel.value === 'Resolved') {
+            if (!actionInput.value.trim()) {
+                var actionGroup = form.querySelector('.action-input-group');
+                if (actionGroup) { actionGroup.style.display = 'flex'; }
+                if (errorSpan) { errorSpan.style.display = 'block'; }
+                actionInput.focus();
+                return false;
+            }
+        }
+        return true;
+    }
+</script>
+{% endblock %}

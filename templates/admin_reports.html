@@ -1,0 +1,1353 @@
+{% extends "base.html" %}
+{% block head %}
+<style>
+/* ─── Screen & Print Document System ─── */
+.doc-header-wrap {
+    display: none;
+}
+
+/* Formal Document Box styling */
+.doc-section {
+    margin-bottom: 28px;
+}
+.doc-section-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--line);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.doc-section-num {
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+.meta-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--bg-accent);
+    border: 1px solid var(--line);
+    padding: 4px 10px;
+    border-radius: var(--radius);
+    font-size: 0.8rem;
+}
+
+/* Document Certification Block */
+.doc-sign-block {
+    display: none;
+}
+
+/* ════════════════════════════════════════════════════════════
+   DOCUMENT PRINT STYLES (@media print)
+   Formats report as an official institutional document (A4/Letter)
+   ════════════════════════════════════════════════════════════ */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 12mm 15mm 15mm 15mm;
+    }
+
+    /* Hide web navigation, dark switches, and action bars */
+    .topbar, .site-footer, .no-print, .btn, .btn-row, button, input[type="search"] {
+        display: none !important;
+    }
+
+    body, html {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        font-family: 'Times New Roman', Times, serif, system-ui !important;
+        font-size: 10pt !important;
+        line-height: 1.4 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .card {
+        background: #ffffff !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 0 20pt 0 !important;
+    }
+
+    /* Institutional Letterhead Header */
+    .doc-header-wrap {
+        display: block !important;
+        margin-bottom: 16pt !important;
+        border-bottom: 3px double #000000 !important;
+        padding-bottom: 10pt !important;
+    }
+    .doc-letterhead {
+        display: flex !important;
+        align-items: center !important;
+        gap: 16pt !important;
+        margin-bottom: 8pt !important;
+    }
+    .doc-logo-img {
+        width: 68px !important;
+        height: 68px !important;
+        object-fit: contain !important;
+    }
+    .doc-letterhead-text {
+        flex: 1 !important;
+        text-align: center !important;
+    }
+    .doc-lh-republic {
+        font-size: 9pt !important;
+        letter-spacing: 0.05em !important;
+        text-transform: uppercase !important;
+        color: #333333 !important;
+        margin: 0 !important;
+    }
+    .doc-lh-univ {
+        font-size: 13pt !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        color: #000000 !important;
+        margin: 2pt 0 !important;
+    }
+    .doc-lh-campus {
+        font-size: 8.5pt !important;
+        color: #444444 !important;
+        margin: 0 0 4pt 0 !important;
+    }
+    .doc-lh-college {
+        font-size: 11pt !important;
+        font-weight: 700 !important;
+        color: #071236 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.02em !important;
+        margin: 2pt 0 0 0 !important;
+    }
+    .doc-lh-unit {
+        font-size: 8.5pt !important;
+        font-style: italic !important;
+        color: #333333 !important;
+        margin: 1pt 0 0 0 !important;
+    }
+
+    /* Document Identification Block */
+    .doc-title-box {
+        text-align: center !important;
+        margin: 10pt 0 14pt 0 !important;
+    }
+    .doc-title-box h2 {
+        font-size: 12pt !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.04em !important;
+        color: #000000 !important;
+        margin: 0 0 2pt 0 !important;
+    }
+    .doc-title-box p {
+        font-size: 8.5pt !important;
+        color: #555555 !important;
+        margin: 0 !important;
+    }
+
+    .doc-meta-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin-bottom: 16pt !important;
+        font-size: 8.5pt !important;
+    }
+    .doc-meta-table td {
+        border: 1px solid #777777 !important;
+        padding: 4pt 8pt !important;
+        background: #fdfdfd !important;
+    }
+    .doc-meta-table strong {
+        font-weight: 700 !important;
+    }
+
+    /* Section Headings */
+    .doc-section-title {
+        font-size: 10.5pt !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        color: #000000 !important;
+        border-bottom: 1.5pt solid #000000 !important;
+        padding-bottom: 3pt !important;
+        margin: 14pt 0 8pt 0 !important;
+        page-break-after: avoid !important;
+    }
+    .doc-section-num {
+        background: #000000 !important;
+        color: #ffffff !important;
+        font-size: 7.5pt !important;
+    }
+
+    /* KPI Grid in Print */
+    .grid {
+        display: grid !important;
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: 8pt !important;
+        margin-bottom: 14pt !important;
+        page-break-inside: avoid !important;
+    }
+    .stat-card {
+        border: 1pt solid #000000 !important;
+        background: #ffffff !important;
+        padding: 6pt 8pt !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        page-break-inside: avoid !important;
+    }
+    .stat-card::before {
+        display: none !important;
+    }
+    .stat-card h3 {
+        font-size: 7.5pt !important;
+        text-transform: uppercase !important;
+        color: #333333 !important;
+        margin: 0 0 2pt 0 !important;
+    }
+    .stat-card strong {
+        font-size: 13pt !important;
+        color: #000000 !important;
+    }
+    .stat-card p {
+        font-size: 7.5pt !important;
+        color: #444444 !important;
+        margin: 2pt 0 0 0 !important;
+    }
+
+    /* Tables in Print */
+    .table-wrap {
+        border: none !important;
+        overflow: visible !important;
+    }
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin-bottom: 12pt !important;
+        font-size: 8pt !important;
+        page-break-inside: auto !important;
+    }
+    tr {
+        page-break-inside: avoid !important;
+        page-break-after: auto !important;
+    }
+    thead {
+        display: table-header-group !important;
+    }
+    th, td {
+        border: 0.75pt solid #444444 !important;
+        padding: 4pt 6pt !important;
+        color: #000000 !important;
+        text-align: left !important;
+    }
+    th {
+        background: #f1f5f9 !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        font-size: 7.5pt !important;
+    }
+    tbody tr:nth-child(even) td {
+        background: #fafafa !important;
+    }
+
+    .badge-success, .badge-warning, .badge-danger, .badge-info, .badge {
+        border: 0.5pt solid #666666 !important;
+        padding: 1pt 4pt !important;
+        font-size: 7pt !important;
+        background: transparent !important;
+        color: #000000 !important;
+        font-weight: 600 !important;
+    }
+
+    /* Document Certification & Sign-off Block */
+    .doc-sign-block {
+        display: block !important;
+        margin-top: 24pt !important;
+        padding-top: 10pt !important;
+        page-break-inside: avoid !important;
+    }
+    .doc-sign-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 20pt !important;
+        text-align: center !important;
+    }
+    .doc-sign-col {
+        font-size: 8.5pt !important;
+    }
+    .doc-sign-title {
+        font-size: 8pt !important;
+        text-transform: uppercase !important;
+        color: #444444 !important;
+        margin-bottom: 36pt !important;
+    }
+    .doc-sign-name {
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        border-top: 1pt solid #000000 !important;
+        padding-top: 4pt !important;
+        color: #000000 !important;
+    }
+    .doc-sign-role {
+        font-size: 7.5pt !important;
+        color: #444444 !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ════════════════════════════════════════════════════════════════
+     DOCUMENT HEADER: OFFICIAL LETTERHEAD (Document Type)
+     ════════════════════════════════════════════════════════════════ -->
+<div class="doc-header-wrap">
+    <div class="doc-letterhead">
+        <img class="doc-logo-img" src="{{ url_for('static', filename='logo.png') }}" alt="NEUST Logo">
+        <div class="doc-letterhead-text">
+            <p class="doc-lh-republic">Republic of the Philippines</p>
+            <h1 class="doc-lh-univ">NUEVA ECIJA UNIVERSITY OF SCIENCE AND TECHNOLOGY</h1>
+            <p class="doc-lh-campus">Gen. Tinio Street, Cabanatuan City, Nueva Ecija &middot; ISO 9001:2015 Certified</p>
+            <h2 class="doc-lh-college">College of Information and Communications Technology</h2>
+            <p class="doc-lh-unit">Equipment Diagnostics, Maintenance &amp; Technical Services Unit</p>
+        </div>
+    </div>
+    
+    <div class="doc-title-box">
+        <h2>Official Equipment Maintenance &amp; Technician Diagnostics Report</h2>
+        <p>Comprehensive Institutional Asset Performance, Repair Turnaround &amp; Workload Audit</p>
+    </div>
+
+    <!-- Administrative Control Information -->
+    <table class="doc-meta-table">
+        <tr>
+            <td style="width:25%;"><strong>Document Ref:</strong> {{ doc_metadata.ref_no }}</td>
+            <td style="width:25%;"><strong>Coverage Period:</strong> {{ from_str }} to {{ to_str }}</td>
+            <td style="width:25%;"><strong>Generated At:</strong> {{ doc_metadata.generated_at }}</td>
+            <td style="width:25%;"><strong>Prepared By:</strong> {{ doc_metadata.prepared_by }}</td>
+        </tr>
+        <tr>
+            <td><strong>Laboratory Facility:</strong> {{ lab if lab else 'All Laboratories (Comprehensive)' }}</td>
+            <td><strong>Category Filter:</strong> {{ category if category else 'All Categories' }}</td>
+            <td><strong>Status Filter:</strong> {{ status if status else 'All Statuses' }}</td>
+            <td><strong>Resolution Success Rate:</strong> {{ resolution_rate }}%</td>
+        </tr>
+    </table>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     INTERACTIVE SCREEN FILTER & ACTION CONTROLS (no-print)
+     ════════════════════════════════════════════════════════════════ -->
+<div class="card no-print">
+    <div class="card-header">
+        <div>
+            <h2>Report Parameters &amp; Diagnostic Filters</h2>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin:2px 0 0;">Filter maintenance audits by specific computer laboratory, timely month, date range, or equipment category.</p>
+        </div>
+        <div class="btn-row" style="margin:0;">
+            {% set qs = request.args.copy() %}
+            {% set _ = qs.update({'export': 'csv'}) %}
+            <a class="btn secondary" href="?{{ qs|urlencode }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Export CSV
+            </a>
+            <button type="button" class="btn" onclick="window.print()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Print Formal Document / Save PDF
+            </button>
+        </div>
+    </div>
+    <form method="get" class="row-2">
+        <div>
+            <label for="f_month">Timely Reporting Month</label>
+            <select id="f_month" name="month">
+                <option value="">Custom Date Range Below</option>
+                {% for am in available_months %}
+                    <option value="{{ am.m_key }}" {{ 'selected' if month == am.m_key else '' }}>{{ am.m_label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="f_lab">Select Laboratory Facility</label>
+            <select id="f_lab" name="lab">
+                <option value="">All Laboratories (Comprehensive)</option>
+                {% for l in locations %}
+                    <option value="{{ l }}" {{ 'selected' if lab == l else '' }}>{{ l }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="f_tech">Technician Dossier Focus</label>
+            <select id="f_tech" name="technician_id">
+                <option value="">All Technicians (Institutional Overview)</option>
+                {% for t in technicians_list %}
+                    <option value="{{ t.id }}" {{ 'selected' if technician_id == t.id else '' }}>{{ t.name|clean }} ({{ t.email|clean }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="f_window">Problem Analytics Window</label>
+            <select id="f_window" name="time_window">
+                <option value="30" {{ 'selected' if time_window == '30' else '' }}>Last 30 Days (Past Month)</option>
+                <option value="60" {{ 'selected' if time_window == '60' else '' }}>Last 60 Days (2 Months)</option>
+                <option value="90" {{ 'selected' if time_window == '90' or not time_window else '' }}>Last 90 Days (Quarterly Default)</option>
+                <option value="180" {{ 'selected' if time_window == '180' else '' }}>Last 180 Days (Half-Year)</option>
+                <option value="365" {{ 'selected' if time_window == '365' else '' }}>Last 365 Days (Annual)</option>
+                <option value="all" {{ 'selected' if time_window == 'all' else '' }}>All Time History</option>
+            </select>
+        </div>
+        <div>
+            <label for="f_from">Date From</label>
+            <input id="f_from" type="date" name="from" value="{{ from_str }}">
+        </div>
+        <div>
+            <label for="f_to">Date To</label>
+            <input id="f_to" type="date" name="to" value="{{ to_str }}">
+        </div>
+        <div>
+            <label for="f_cat">Equipment Category</label>
+            <select id="f_cat" name="category">
+                <option value="">All Categories</option>
+                {% for c in categories %}
+                    <option value="{{ c }}" {{ 'selected' if category == c else '' }}>{{ c|clean }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="f_st">Request Status</label>
+            <select id="f_st" name="status">
+                <option value="">All Statuses</option>
+                {% for s in ['Pending', 'In Progress', 'Resolved', 'Rejected'] %}
+                    <option value="{{ s }}" {{ 'selected' if status == s else '' }}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="grid-column: 1 / -1; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+            <button type="submit" class="btn">Generate Report</button>
+            <a href="{{ url_for('reports.index') }}" class="btn secondary">Reset Filters</a>
+            
+            <!-- Quick Laboratory Selector Jump Pills -->
+            <div style="display:flex;gap:6px;align-items:center;margin-left:auto;flex-wrap:wrap;">
+                <span style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;">Quick Lab Filter:</span>
+                <a href="{{ url_for('reports.index', lab='', time_window=time_window) }}" class="badge {{ 'badge-info' if not lab else '' }}" style="text-decoration:none;cursor:pointer;padding:4px 9px;">All Labs</a>
+                {% for l in locations %}
+                    <a href="{{ url_for('reports.index', lab=l, time_window=time_window) }}" class="badge {{ 'badge-info' if lab == l else '' }}" style="text-decoration:none;cursor:pointer;padding:4px 9px;">{{ l }}</a>
+                {% endfor %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SECTION 1.0: EXECUTIVE SUMMARY & OPERATIONAL KPIS
+     ════════════════════════════════════════════════════════════════ -->
+<div class="doc-section">
+    <div class="doc-section-title">
+        <span class="doc-section-num">1.0</span>
+        Executive Summary &amp; Operational KPIs
+    </div>
+    <div class="grid">
+        <div class="stat-card">
+            <h3>Total Incidents Logged</h3>
+            <strong>{{ total_req }}</strong>
+            <p>{{ total_equipment }} active lab assets</p>
+        </div>
+        <div class="stat-card">
+            <h3>Repairs Completed</h3>
+            <strong style="color:var(--success, #10b981);">{{ resolved_req }}</strong>
+            <p>{{ resolution_rate }}% resolution success rate</p>
+        </div>
+        <div class="stat-card">
+            <h3>Active / Ongoing Work</h3>
+            <strong style="color:var(--warning, #f59e0b);">{{ in_progress_req + pending_req }}</strong>
+            <p>{{ in_progress_req }} in progress &middot; {{ pending_req }} pending</p>
+        </div>
+        <div class="stat-card">
+            <h3>Average Turnaround</h3>
+            <strong>{{ avg_res_str }}</strong>
+            <p>Avg response: {{ avg_resp_str }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SECTION 2.0: MONTHLY INCIDENT & RESOLUTION ANALYSIS
+     ════════════════════════════════════════════════════════════════ -->
+<div class="doc-section">
+    <div class="doc-section-title">
+        <span class="doc-section-num">2.0</span>
+        Monthly Incident &amp; Resolution Performance Breakdown
+    </div>
+
+    <!-- Monthly Trend Chart (Screen View) -->
+    <div class="card no-print" style="margin-bottom:16px;">
+        <div class="card-header">
+            <h2>Monthly Request Inflow Trends</h2>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin:0;">Visual volume of reported maintenance issues across timely calendar months</p>
+        </div>
+        <canvas id="monthChart" style="max-height: 240px;"></canvas>
+    </div>
+
+    <!-- Official Monthly Breakdown Table (Screen & Print Document) -->
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Reporting Month</th>
+                    <th style="text-align:center;">Total Requests</th>
+                    <th style="text-align:center;">Resolved / Fixed</th>
+                    <th style="text-align:center;">In Progress</th>
+                    <th style="text-align:center;">Pending</th>
+                    <th style="text-align:right;">Resolution Rate</th>
+                    <th style="text-align:right;">Avg. Fix Duration</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mb in monthly_breakdown %}
+                <tr>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            <strong style="color:var(--text);font-size:0.9rem;">{{ mb.month_label }}</strong>
+                        </div>
+                    </td>
+                    <td style="text-align:center;">{{ mb.total }}</td>
+                    <td style="text-align:center;"><span class="badge badge-success">{{ mb.resolved }}</span></td>
+                    <td style="text-align:center;"><span class="badge badge-warning">{{ mb.in_progress }}</span></td>
+                    <td style="text-align:center;"><span class="badge badge-info">{{ mb.pending }}</span></td>
+                    <td style="text-align:right;"><strong>{{ mb.rate }}%</strong></td>
+                    <td style="text-align:right;">{{ mb.avg_duration_str }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:16px;color:var(--text-muted);">No monthly maintenance history recorded for the selected period.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SECTION 3.0: LABORATORY FACILITY ASSET & DIAGNOSTIC AUDIT
+     ════════════════════════════════════════════════════════════════ -->
+<div class="doc-section">
+    <div class="doc-section-title">
+        <span class="doc-section-num">3.0</span>
+        {% if lab_stats %}
+            {{ lab_stats.name }} — Specific Facility Inventory &amp; Diagnostic Audit
+        {% else %}
+            Laboratory Facility Diagnostics &amp; Operational Readiness Overview
+        {% endif %}
+    </div>
+
+    {% if lab_stats %}
+    <!-- Specific Laboratory Diagnostic Dashboard -->
+    <div style="margin-bottom: 20px;">
+        <div class="grid" style="margin-bottom: 16px;">
+            <div class="stat-card">
+                <h3>Stationed Equipment</h3>
+                <strong>{{ lab_stats.total }}</strong>
+                <p>Hardware stationed in {{ lab_stats.name }}</p>
+            </div>
+            <div class="stat-card">
+                <h3>Operational Readiness</h3>
+                <strong style="color:var(--success, #10b981);">{{ lab_stats.readiness }}%</strong>
+                <p>{{ lab_stats.working }} functioning properly</p>
+            </div>
+            <div class="stat-card">
+                <h3>Under Repair / Service</h3>
+                <strong style="color:var(--warning, #f59e0b);">{{ lab_stats.maintenance }}</strong>
+                <p>Active maintenance in lab</p>
+            </div>
+            <div class="stat-card">
+                <h3>Not Working / Defective</h3>
+                <strong style="color:var(--danger, #ef4444);">{{ lab_stats.damaged }}</strong>
+                <p>Requires immediate attention</p>
+            </div>
+        </div>
+
+        <!-- All Items Stationed in this Lab -->
+        <h3 style="font-size:0.95rem;font-weight:800;margin:18px 0 10px;color:var(--text);display:flex;align-items:center;justify-content:space-between;">
+            <span>Hardware Assets Stationed in {{ lab_stats.name }} (All {{ lab_stats.total }} Items)</span>
+            <span style="font-size:0.8rem;font-weight:500;color:var(--text-muted);">Official Room Manifest</span>
+        </h3>
+        <div class="table-wrap">
+            <table class="doc-table">
+                <thead>
+                    <tr>
+                        <th style="width:30%;">Equipment Asset Name</th>
+                        <th style="width:20%;">Category</th>
+                        <th style="width:15%;text-align:center;">Condition Status</th>
+                        <th style="width:10%;text-align:center;">Incidents</th>
+                        <th style="width:10%;text-align:center;">Fixed</th>
+                        <th style="width:15%;text-align:right;">Last Reported</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in lab_equipment %}
+                    <tr>
+                        <td>
+                            <strong>{{ item.name|clean }}</strong>
+                            {% if item.active_issue_count and item.active_issue_count > 0 %}
+                                <span class="badge badge-warning" style="font-size:0.68rem;margin-left:4px;">Active Ticket</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.category|clean }}</td>
+                        <td style="text-align:center;">
+                            <span class="{{ status_badge(item.status) }}">{{ item.status }}</span>
+                        </td>
+                        <td style="text-align:center;"><strong>{{ item.incident_count }}</strong></td>
+                        <td style="text-align:center;"><span class="badge badge-success">{{ item.resolved_count or 0 }}</span></td>
+                        <td style="text-align:right;font-size:0.82rem;">
+                            {% if item.last_reported_date %}
+                                {{ item.last_reported_date.strftime('%b %d, %Y') }}
+                            {% else %}
+                                <span style="color:var(--text-muted);">&mdash;</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align:center;padding:16px;color:var(--text-muted);">
+                            No equipment currently registered in {{ lab_stats.name }}.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Maintenance History for this specific lab -->
+        {% if lab_history %}
+        <h3 style="font-size:0.95rem;font-weight:800;margin:24px 0 10px;color:var(--text);">
+            Specific Maintenance &amp; Repair History for {{ lab_stats.name }}
+        </h3>
+        <div class="table-wrap">
+            <table class="doc-table">
+                <thead>
+                    <tr>
+                        <th style="width:22%;">Asset Name</th>
+                        <th style="width:22%;">Issue Reported</th>
+                        <th style="width:10%;text-align:center;">Status</th>
+                        <th style="width:14%;">Assigned Tech</th>
+                        <th style="width:12%;text-align:center;">Fix Time</th>
+                        <th style="width:20%;">Action Taken</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lh in lab_history %}
+                    <tr>
+                        <td><strong>{{ lh.equipment_name|clean }}</strong></td>
+                        <td style="font-size:0.83rem;">{{ lh.description|clean }}</td>
+                        <td style="text-align:center;"><span class="{{ status_badge(lh.status) }}">{{ lh.status }}</span></td>
+                        <td>{{ lh.technician_name if lh.technician_name else 'Unassigned' }}</td>
+                        <td style="text-align:center;font-weight:600;">{{ lh.duration_str }}</td>
+                        <td style="font-size:0.83rem;">{{ lh.action_taken if lh.action_taken else 'Pending inspection' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    {% else %}
+    <!-- Comparative Overview of All Laboratories -->
+    <div class="table-wrap">
+        <table class="doc-table">
+            <thead>
+                <tr>
+                    <th style="width:24%;">Laboratory Facility</th>
+                    <th style="width:12%;text-align:center;">Total Assets</th>
+                    <th style="width:12%;text-align:center;">Working</th>
+                    <th style="width:12%;text-align:center;">Under Repair</th>
+                    <th style="width:12%;text-align:center;">Not Working</th>
+                    <th style="width:15%;text-align:center;">Operational Readiness</th>
+                    <th style="width:15%;text-align:right;" class="no-print">Facility Audit</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ls in all_labs_summary %}
+                <tr>
+                    <td>
+                        <strong>{{ ls.location }}</strong>
+                    </td>
+                    <td style="text-align:center;"><strong>{{ ls.total_assets }}</strong></td>
+                    <td style="text-align:center;"><span class="badge badge-success">{{ ls.working_count or 0 }}</span></td>
+                    <td style="text-align:center;"><span class="badge badge-warning">{{ ls.maintenance_count or 0 }}</span></td>
+                    <td style="text-align:center;"><span class="badge badge-danger">{{ ls.damaged_count or 0 }}</span></td>
+                    <td style="text-align:center;">
+                        <strong style="color:{% if ls.readiness_rate >= 80 %}var(--success, #10b981){% elif ls.readiness_rate >= 50 %}var(--warning, #f59e0b){% else %}var(--danger, #ef4444){% endif %};">
+                            {{ ls.readiness_rate }}%
+                        </strong>
+                    </td>
+                    <td style="text-align:right;" class="no-print">
+                        <a href="{{ url_for('reports.index', lab=ls.location) }}" class="btn secondary btn-sm" style="padding:4px 8px;font-size:0.75rem;">
+                            Audit {{ ls.location }} &rarr;
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align:center;padding:16px;color:var(--text-muted);">No laboratory facilities registered.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SECTION 4.0: PROBLEM IDENTIFICATION & PROBLEMATIC DEVICE ANALYTICS
+     ════════════════════════════════════════════════════════════════ -->
+<div class="doc-section">
+    <div class="doc-section-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div>
+            <span class="doc-section-num">4.0</span>
+            Problem Identification &amp; Problematic Device Analytics
+        </div>
+        <div class="no-print" style="display:flex; gap:6px; align-items:center; font-size:0.8rem; font-weight:normal;">
+            <span style="color:var(--text-muted); font-weight:600;">Time Window:</span>
+            {% for w_val, w_txt in [('30', '30 Days'), ('60', '60 Days'), ('90', '90 Days'), ('180', '180 Days'), ('365', '1 Year'), ('all', 'All Time')] %}
+                <a href="{{ url_for('reports.index', lab=lab, time_window=w_val, technician_id=technician_id, from=from_str, to=to_str) }}" 
+                   class="badge {{ 'badge-info' if time_window == w_val or (not time_window and w_val == '90') else '' }}"
+                   style="text-decoration:none; padding:3px 8px; font-weight:600;">
+                    {{ w_txt }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Analytics KPI Cards -->
+    <div class="grid" style="margin-bottom: 18px;">
+        <div class="stat-card">
+            <h3>Problematic Devices Identified</h3>
+            <strong style="color:var(--danger, #ef4444);">
+                {{ problematic_devices|selectattr('failure_count', 'ge', 2)|list|length }}
+            </strong>
+            <p>Assets with &ge; 2 failures in {{ time_window if time_window != 'all' else 'all-time' }} days</p>
+        </div>
+        <div class="stat-card">
+            <h3>High-Failure Alert (Critical)</h3>
+            <strong style="color:var(--danger, #ef4444);">
+                {{ problematic_devices|selectattr('failure_count', 'ge', 3)|list|length }}
+            </strong>
+            <p>Critical repeat failure threshold (&ge; 3 incidents)</p>
+        </div>
+        <div class="stat-card">
+            <h3>Top Failing Component</h3>
+            <strong style="font-size:1.15rem; color:var(--text);">
+                {{ component_failures[0].component|clean if component_failures else 'N/A' }}
+            </strong>
+            <p>{{ component_failures[0].failure_count if component_failures else 0 }} breakdown tickets</p>
+        </div>
+    </div>
+
+    <!-- Problematic Hardware Devices Table -->
+    <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:8px; color:var(--text); display:flex; justify-content:space-between; align-items:center;">
+        <span>Flagged Problematic Equipment Assets (Repair Frequency Aggregate)</span>
+        <span style="font-size:0.8rem; font-weight:500; color:var(--text-muted);">Window: {{ time_window }} days &middot; Threshold: &ge; 2 Failures</span>
+    </h4>
+    <div class="table-wrap" style="margin-bottom: 20px;">
+        <table class="doc-table">
+            <thead>
+                <tr>
+                    <th style="width:22%;">Equipment Asset</th>
+                    <th style="width:14%;">Designated Lab</th>
+                    <th style="width:14%;">Category</th>
+                    <th style="width:12%; text-align:center;">Repair Frequency</th>
+                    <th style="width:14%; text-align:center;">Alert Status</th>
+                    <th style="width:12%;">Current State</th>
+                    <th style="width:12%; text-align:right;">Last Failure</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pd in problematic_devices %}
+                <tr>
+                    <td>
+                        <strong>{{ pd.name|clean }}</strong>
+                        {% if pd.recurring_components %}
+                            <div style="font-size:0.75rem; color:var(--primary); margin-top:2px;">
+                                Parts: {{ pd.recurring_components|clean }}
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ pd.location|clean }}</strong></td>
+                    <td>{{ pd.category|clean }}</td>
+                    <td style="text-align:center;">
+                        <span class="{{ pd.badge_class }}" style="font-size:0.85rem; font-weight:800;">
+                            {{ pd.failure_count }} repair{{ 's' if pd.failure_count != 1 else '' }}
+                        </span>
+                        <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">
+                            {{ pd.resolved_count }} resolved &middot; {{ pd.active_count }} active
+                        </div>
+                    </td>
+                    <td style="text-align:center;">
+                        <span class="{{ pd.badge_class }}" style="font-weight:700;">{{ pd.flag_label }}</span>
+                    </td>
+                    <td>
+                        <span class="{{ status_badge(pd.current_status) }}">{{ pd.current_status }}</span>
+                    </td>
+                    <td style="text-align:right; font-size:0.82rem;">
+                        {{ pd.last_failure_date.strftime('%b %d, %Y') if pd.last_failure_date else '—' }}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:24px; color:var(--text-muted);">
+                        No equipment assets exceed high failure frequencies within the selected window. All institutional hardware operational stability within normal limits.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Component Failure Patterns Breakdown -->
+    <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:8px; color:var(--text);">
+        Problem Identification — Component Failure Frequency Across Facilities
+    </h4>
+    <div class="table-wrap">
+        <table class="doc-table">
+            <thead>
+                <tr>
+                    <th style="width:30%;">Vulnerable Hardware Component</th>
+                    <th style="width:18%; text-align:center;">Failure Count</th>
+                    <th style="width:18%; text-align:center;">Distinct Devices</th>
+                    <th style="width:34%;">Impacted Laboratories</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cf in component_failures %}
+                <tr>
+                    <td><strong>{{ cf.component|clean }}</strong></td>
+                    <td style="text-align:center;"><span class="badge badge-warning" style="font-weight:700;">{{ cf.failure_count }} breakdowns</span></td>
+                    <td style="text-align:center;"><strong>{{ cf.affected_devices }}</strong> devices</td>
+                    <td style="font-size:0.84rem; color:var(--text-muted);">{{ cf.affected_labs|clean or 'All Laboratories' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="text-align:center; padding:16px; color:var(--text-muted);">No recurring component failure patterns logged.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SECTION 5.0: TECHNICIAN PERFORMANCE, WORKLOAD & INDIVIDUAL REPORTS
+     ════════════════════════════════════════════════════════════════ -->
+<div class="doc-section">
+    <div class="doc-section-title" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+        <div>
+            <span class="doc-section-num">5.0</span>
+            Technician Workload Monitoring &amp; Performance Reporting
+        </div>
+        <div class="no-print" style="display:flex; gap:6px; align-items:center;">
+            <span style="font-size:0.8rem; color:var(--text-muted); font-weight:600;">Focus Technician:</span>
+            <select onchange="window.location.href=this.value;" style="font-size:0.8rem; padding:3px 8px; border-radius:6px;">
+                <option value="{{ url_for('reports.index', lab=lab, time_window=time_window, from=from_str, to=to_str) }}">All Technicians (Overview)</option>
+                {% for t in technicians_list %}
+                    <option value="{{ url_for('reports.index', lab=lab, time_window=time_window, technician_id=t.id, from=from_str, to=to_str) }}" {{ 'selected' if technician_id == t.id else '' }}>
+                        {{ t.name|clean }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Dedicated Individual Technician Report Dossier (When a technician is selected) -->
+    {% if individual_tech_report %}
+    <div class="card" style="margin-bottom:24px; border:2px solid var(--primary); background:rgba(21,71,160,0.02); padding:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:16px;">
+            <div>
+                <span class="badge badge-info" style="font-size:0.75rem; font-weight:700; text-transform:uppercase;">Dedicated Individual Technician Report Dossier</span>
+                <h3 style="margin:6px 0 2px; font-size:1.25rem; color:var(--text);">{{ individual_tech_report.technician.name|clean }}</h3>
+                <p style="margin:0; font-size:0.85rem; color:var(--text-muted);">
+                    Email: <strong>{{ individual_tech_report.technician.email|clean }}</strong> &middot; Role: <strong>CICT Technical Specialist</strong>
+                </p>
+            </div>
+            <div class="no-print" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                {% set tech_qs = request.args.copy() %}
+                {% set _ = tech_qs.update({'export': 'tech_csv', 'technician_id': individual_tech_report.technician.id}) %}
+                <a class="btn secondary btn-sm" href="?{{ tech_qs|urlencode }}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export Technician CSV
+                </a>
+                <a class="btn secondary btn-sm" href="{{ url_for('reports.index', lab=lab, time_window=time_window, from=from_str, to=to_str) }}">
+                    Back to Institutional Overview
+                </a>
+            </div>
+        </div>
+
+        <div class="grid" style="margin-bottom:18px;">
+            <div class="stat-card">
+                <h3>Total Assigned Tickets</h3>
+                <strong>{{ individual_tech_report.total_assigned }}</strong>
+                <p>Assigned repair workload</p>
+            </div>
+            <div class="stat-card">
+                <h3>Repairs Completed</h3>
+                <strong style="color:var(--success, #10b981);">{{ individual_tech_report.completed_repairs }}</strong>
+                <p>{{ individual_tech_report.efficiency_rate }}% Completion Efficiency</p>
+            </div>
+            <div class="stat-card">
+                <h3>Active In-Progress Tasks</h3>
+                <strong style="color:var(--warning, #f59e0b);">{{ individual_tech_report.in_progress_repairs }}</strong>
+                <p>Currently undergoing repair</p>
+            </div>
+            <div class="stat-card">
+                <h3>Average Fix Duration</h3>
+                <strong style="font-size:1.2rem;">{{ individual_tech_report.avg_duration_str }}</strong>
+                <p>Total fix duration: {{ individual_tech_report.total_duration_str }}</p>
+            </div>
+        </div>
+
+        <div class="grid" style="align-items:start; margin-bottom:18px;">
+            <!-- Monthly Assigned vs Completed for this Technician -->
+            <div>
+                <h4 style="font-size:0.92rem; font-weight:700; margin-bottom:8px; color:var(--text);">Monthly Workload &amp; Resolution Metrics</h4>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Month</th>
+                                <th style="text-align:center;">Assigned</th>
+                                <th style="text-align:center;">Completed</th>
+                                <th style="text-align:right;">Completion Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mm in individual_tech_report.monthly_metrics %}
+                            <tr>
+                                <td><strong>{{ mm.m_label }}</strong></td>
+                                <td style="text-align:center;">{{ mm.assigned_count }}</td>
+                                <td style="text-align:center;"><span class="badge badge-success">{{ mm.completed_count }}</span></td>
+                                <td style="text-align:right; font-weight:600;">
+                                    {% if mm.assigned_count > 0 %}
+                                        {{ ((mm.completed_count / mm.assigned_count) * 100)|round(1) }}%
+                                    {% else %}
+                                        100%
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" style="text-align:center; padding:12px; color:var(--text-muted);">No monthly activity recorded.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Laboratory Distribution for this Technician -->
+            <div>
+                <h4 style="font-size:0.92rem; font-weight:700; margin-bottom:8px; color:var(--text);">Laboratory Service Distribution</h4>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Laboratory Facility</th>
+                                <th style="text-align:center;">Tickets Handled</th>
+                                <th style="text-align:right;">Repairs Resolved</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lb in individual_tech_report.lab_breakdown %}
+                            <tr>
+                                <td><strong>{{ lb.location }}</strong></td>
+                                <td style="text-align:center;">{{ lb.total }}</td>
+                                <td style="text-align:right;"><span class="badge badge-success">{{ lb.resolved }}</span></td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="3" style="text-align:center; padding:12px; color:var(--text-muted);">No laboratory repair data.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Individual Detailed Repair Logs -->
+        <h4 style="font-size:0.92rem; font-weight:700; margin-bottom:8px; color:var(--text);">Individual Repair History &amp; Audit Trail for {{ individual_tech_report.technician.name|clean }}</h4>
+        <div class="table-wrap">
+            <table style="font-size:0.83rem;">
+                <thead>
+                    <tr>
+                        <th>Equipment Name</th>
+                        <th>Laboratory</th>
+                        <th>Reported Issue</th>
+                        <th>Started Date</th>
+                        <th>Completion Date</th>
+                        <th>Duration</th>
+                        <th>Resolution Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in individual_tech_report.audit_logs %}
+                    <tr>
+                        <td>
+                            <strong>{{ item.equipment_name|clean }}</strong><br>
+                            <span style="font-size:0.75rem; color:var(--text-muted);">{{ item.equipment_category|clean }}</span>
+                        </td>
+                        <td><strong>{{ item.equipment_location|clean }}</strong></td>
+                        <td>
+                            <div>{{ item.description|clean }}</div>
+                            <span class="badge {{ 'badge-danger' if item.urgency in ['High', 'Critical'] else 'badge-info' }}" style="font-size:0.68rem;">{{ item.urgency }}</span>
+                        </td>
+                        <td style="white-space:nowrap; font-size:0.78rem;">
+                            {{ item.repair_start.strftime('%Y-%m-%d %H:%M') if item.repair_start else (item.date_reported.strftime('%Y-%m-%d %H:%M') if item.date_reported else '—') }}
+                        </td>
+                        <td style="white-space:nowrap; font-size:0.78rem;">
+                            {{ item.date_completed.strftime('%Y-%m-%d %H:%M') if item.date_completed else '—' }}
+                        </td>
+                        <td style="white-space:nowrap; font-weight:700; color:var(--primary);">
+                            {{ item.duration_str }}
+                        </td>
+                        <td style="max-width:240px; font-size:0.82rem;">
+                            {{ item.action_taken|clean if item.action_taken else 'Resolved' }}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" style="text-align:center; padding:16px; color:var(--text-muted);">No repair records found for this technician.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Institutional Technician Summary Performance Table -->
+    <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:8px; color:var(--text); display:flex; justify-content:space-between; align-items:center;">
+        <span>Institutional Technician Roster Performance Summary</span>
+        <span style="font-size:0.8rem; font-weight:500; color:var(--text-muted);">Assigned vs. Completed Workload</span>
+    </h4>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Technician Name</th>
+                    <th>Email Contact</th>
+                    <th style="text-align:center;">Total Assigned</th>
+                    <th style="text-align:center;">Completed Repairs</th>
+                    <th style="text-align:center;">Active Tasks</th>
+                    <th style="text-align:right;">Avg. Turnaround Time</th>
+                    <th style="text-align:right;">Total Logged Fix Time</th>
+                    <th style="text-align:right;">Efficiency Rate</th>
+                    <th style="text-align:right;" class="no-print">Individual Report</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tech_stats %}
+                <tr>
+                    <td>
+                        <strong>{{ t.technician_name|clean }}</strong>
+                    </td>
+                    <td>{{ t.technician_email|clean }}</td>
+                    <td style="text-align:center;">{{ t.total_assigned }}</td>
+                    <td style="text-align:center;">
+                        <span class="badge badge-success" style="font-size:0.85rem;font-weight:700;">
+                            {{ t.completed_repairs }} fixed
+                        </span>
+                    </td>
+                    <td style="text-align:center;">
+                        {% if t.in_progress_count > 0 %}
+                            <span class="badge badge-warning">{{ t.in_progress_count }} active</span>
+                        {% else %}
+                            <span style="color:var(--text-muted);font-size:0.8rem;">0</span>
+                        {% endif %}
+                    </td>
+                    <td style="text-align:right;">
+                        <strong>{{ t.avg_fix_str }}</strong>
+                    </td>
+                    <td style="text-align:right;">{{ t.total_fix_str }}</td>
+                    <td style="text-align:right;"><strong>{{ t.efficiency_rate }}%</strong></td>
+                    <td style="text-align:right;" class="no-print">
+                        <a href="{{ url_for('reports.index', lab=lab, time_window=time_window, technician_id=t.technician_id, from=from_str, to=to_str) }}" 
+                           class="btn secondary btn-sm" style="padding:4px 8px; font-size:0.75rem;">
+                            View Dossier &rarr;
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" style="text-align:center;padding:16px;color:var(--text-muted);">No active technicians found in the institution.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Detailed List of Fixed Equipment per Technician -->
+    <div style="margin-top:16px;">
+        <h4 style="font-size:0.92rem;font-weight:700;margin-bottom:8px;color:var(--text);">Detailed Equipment Repaired by Each Technician</h4>
+        
+        {% for t in tech_stats %}
+        <div class="card" style="margin-bottom:12px;padding:14px 18px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:6px;margin-bottom:10px;">
+                <h5 style="margin:0;font-size:0.95rem;font-weight:700;color:var(--text);">
+                    {{ t.technician_name|clean }} &middot; <span style="font-weight:500;color:var(--text-muted);font-size:0.8rem;">{{ t.completed_repairs }} Equipment Fixed</span>
+                </h5>
+                <span style="font-size:0.8rem;color:var(--text-muted);">Average Time to Fix: <strong>{{ t.avg_fix_str }}</strong></span>
+            </div>
+            
+            {% if t.fixed_items %}
+            <div class="table-wrap">
+                <table style="font-size:0.82rem;">
+                    <thead>
+                        <tr>
+                            <th>Equipment Fixed</th>
+                            <th>Lab Location</th>
+                            <th>Issue Reported</th>
+                            <th>Action Taken / Solution</th>
+                            <th style="text-align:right;">Time to Fix</th>
+                            <th style="text-align:right;">Date Completed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in t.fixed_items %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.equipment_name|clean }}</strong><br>
+                                <span style="font-size:0.75rem;color:var(--text-muted);">{{ item.equipment_category|clean }}</span>
+                            </td>
+                            <td>{{ item.equipment_location|clean }}</td>
+                            <td>{{ item.description|clean }}</td>
+                            <td>{{ item.action_taken|clean if item.action_taken else 'Standard Diagnostic & Restoration' }}</td>
+                            <td style="text-align:right;white-space:nowrap;">
+                                <strong style="color:var(--primary);">{{ item.duration_str }}</strong>
+                            </td>
+                            <td style="text-align:right;white-space:nowrap;">
+                                {{ item.date_completed.strftime('%Y-%m-%d %H:%M') if item.date_completed else '—' }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p style="margin:0;font-size:0.82rem;color:var(--text-muted);font-style:italic;">No resolved equipment logged under this technician for the current date range.</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SECTION 6.0: EQUIPMENT FREQUENCY & CATEGORY BREAKDOWN
+     ════════════════════════════════════════════════════════════════ -->
+<div class="doc-section">
+    <div class="doc-section-title">
+        <span class="doc-section-num">6.0</span>
+        Recurring Incident Equipment &amp; Category Vulnerabilities
+    </div>
+    <div class="grid" style="align-items:start;">
+        <div class="card">
+            <div class="card-header">
+                <h2>Top Equipment Requiring Repairs</h2>
+                <p style="font-size:0.8rem;color:var(--text-muted);">Assets generating frequent maintenance tickets</p>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Equipment Name</th>
+                            <th>Location</th>
+                            <th style="text-align:right;">Incidents</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in freq_rows %}
+                        <tr>
+                            <td><strong>{{ r.name|clean }}</strong></td>
+                            <td>{{ r.location|clean }}</td>
+                            <td style="text-align:right;"><span class="badge badge-warning">{{ r.total }} ticket{{ 's' if r.total != 1 else '' }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" style="text-align:center;padding:16px;color:var(--text-muted);">No recurring equipment failures reported.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Issues by Equipment Category</h2>
+                <p style="font-size:0.8rem;color:var(--text-muted);">Asset category failure distribution</p>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th style="text-align:right;">Incident Count</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in common_issues %}
+                        <tr>
+                            <td><strong>{{ r.category|clean }}</strong></td>
+                            <td style="text-align:right;"><span class="badge badge-info">{{ r.count }} incident{{ 's' if r.count != 1 else '' }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="2" style="text-align:center;padding:16px;color:var(--text-muted);">No category breakdown available.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SECTION 7.0: DETAILED MAINTENANCE & DIAGNOSTIC AUDIT LOG
+     ════════════════════════════════════════════════════════════════ -->
+<div class="doc-section">
+    <div class="doc-section-title">
+        <span class="doc-section-num">7.0</span>
+        Complete Maintenance &amp; Diagnostic Audit Trail ({{ detailed_logs|length }} Records)
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date Reported</th>
+                    <th>Equipment &amp; Location</th>
+                    <th>Issue Description</th>
+                    <th>Urgency</th>
+                    <th>Status</th>
+                    <th>Assigned Technician</th>
+                    <th>Start Date/Time</th>
+                    <th>Completion Date</th>
+                    <th>Calculated Duration</th>
+                    <th>Action Taken</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in detailed_logs %}
+                <tr>
+                    <td style="white-space:nowrap;font-size:0.8rem;">
+                        {{ log.date_reported.strftime('%Y-%m-%d %H:%M') if log.date_reported else '—' }}
+                    </td>
+                    <td>
+                        <strong>{{ log.equipment_name|clean }}</strong><br>
+                        <span style="font-size:0.75rem;color:var(--text-muted);">{{ log.location|clean }} &middot; {{ log.category|clean }}</span>
+                    </td>
+                    <td style="max-width:180px;">{{ log.description|clean }}</td>
+                    <td>
+                        {% if log.urgency == 'Critical' %}
+                            <span class="badge badge-danger">Critical</span>
+                        {% elif log.urgency == 'High' %}
+                            <span class="badge badge-warning">High</span>
+                        {% else %}
+                            <span class="badge badge-info">{{ log.urgency }}</span>
+                        {% endif %}
+                    </td>
+                    <td><span class="{{ status_badge(log.status) }}">{{ log.status|clean }}</span></td>
+                    <td>
+                        {% if log.technician_name %}
+                            <strong>{{ log.technician_name|clean }}</strong>
+                        {% else %}
+                            <span style="color:var(--text-muted);font-style:italic;">Unassigned</span>
+                        {% endif %}
+                    </td>
+                    <td style="white-space:nowrap;font-size:0.8rem;">
+                        {{ log.repair_start_dt.strftime('%Y-%m-%d %H:%M') if log.repair_start_dt else '—' }}
+                    </td>
+                    <td style="white-space:nowrap;font-size:0.8rem;">
+                        {{ log.date_completed.strftime('%Y-%m-%d %H:%M') if log.date_completed else '—' }}
+                    </td>
+                    <td style="white-space:nowrap;font-weight:600;">{{ log.duration_str }}</td>
+                    <td style="max-width:200px;">{{ log.action_taken|clean if log.action_taken else '—' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="10" style="text-align:center;padding:24px;color:var(--text-muted);">No records found matching the specified report parameters.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     SECTION 8.0: FORMAL DOCUMENT SIGN-OFF & CERTIFICATION (Print View)
+     ════════════════════════════════════════════════════════════════ -->
+<div class="doc-sign-block">
+    <div style="font-size:9pt;font-weight:700;text-transform:uppercase;margin-bottom:12pt;border-bottom:1pt solid #000;padding-bottom:3pt;">
+        8.0 Institutional Certification &amp; Signatures
+    </div>
+    <div class="doc-sign-grid">
+        <div class="doc-sign-col">
+            <div class="doc-sign-title">Prepared &amp; Audited By:</div>
+            <div class="doc-sign-name">{{ doc_metadata.prepared_by }}</div>
+            <div class="doc-sign-role">{{ doc_metadata.user_role }} / Property Custodian</div>
+            <div style="font-size:7.5pt;margin-top:2pt;">Date: ________________________</div>
+        </div>
+        <div class="doc-sign-col">
+            <div class="doc-sign-title">Inspected &amp; Verified By:</div>
+            <div class="doc-sign-name">Engr. Lead Technician</div>
+            <div class="doc-sign-role">Head, CICT Technical Repair Services</div>
+            <div style="font-size:7.5pt;margin-top:2pt;">Date: ________________________</div>
+        </div>
+        <div class="doc-sign-col">
+            <div class="doc-sign-title">Approved &amp; Endorsed By:</div>
+            <div class="doc-sign-name">Dr. College Dean</div>
+            <div class="doc-sign-role">Dean, College of Information &amp; Communications Tech</div>
+            <div style="font-size:7.5pt;margin-top:2pt;">Date: ________________________</div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const ctx = document.getElementById('monthChart');
+    if (ctx) {
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: {{ monthly|map(attribute='month_label')|list|tojson }},
+                datasets: [
+                    {
+                        label: 'Total Reported',
+                        data: {{ monthly|map(attribute='total')|list|tojson }},
+                        backgroundColor: 'rgba(37, 99, 235, 0.75)',
+                        borderRadius: 5
+                    },
+                    {
+                        label: 'Resolved',
+                        data: {{ monthly|map(attribute='resolved')|list|tojson }},
+                        backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                        borderRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

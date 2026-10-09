@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2>{{ 'Edit Equipment' if edit_doc else 'Add Equipment Asset' }}</h2>
+        {% if edit_doc %}
+            <a href="{{ url_for('equipment.index') }}" class="btn secondary btn-sm">Cancel Edit</a>
+        {% endif %}
+    </div>
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="equipment_id" value="{{ edit_doc.id if edit_doc else '' }}">
+        <div class="row-2">
+            <div>
+                <label for="eq_name">Equipment Name</label>
+                <input id="eq_name" name="name" required value="{{ edit_doc.name|clean if edit_doc else '' }}" placeholder="e.g. PC Workstation #01">
+            </div>
+            <div>
+                <label for="eq_cat">Category</label>
+                <select id="eq_cat" name="category" required>
+                    <option value="" disabled {{ 'selected' if not edit_doc else '' }}>Select Category</option>
+                    {% set categories = ['Desktop Workstation', 'Multimedia & Display', 'Networking & Power', 'Peripherals & Office'] %}
+                    {% for cat in categories %}
+                        <option value="{{ cat }}" {{ 'selected' if edit_doc and edit_doc.category == cat else '' }}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="eq_loc">Location</label>
+                <select id="eq_loc" name="location" required>
+                    <option value="" disabled {{ 'selected' if not edit_doc else '' }}>Select Location</option>
+                    {% for lab_num in range(1, 8) %}
+                        {% set lab_name = 'Laboratory ' ~ lab_num %}
+                        <option value="{{ lab_name }}" {{ 'selected' if edit_doc and edit_doc.location == lab_name else '' }}>{{ lab_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="eq_status">Status</label>
+                <select id="eq_status" name="status">
+                    {% for st in ['Working', 'Under Repair', 'Not Working'] %}
+                        <option value="{{ st }}" {{ 'selected' if (edit_doc and edit_doc.status == st) or (not edit_doc and st == 'Working') else '' }}>{{ st }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div style="margin-top:16px;">
+            <button type="submit" class="btn">{{ 'Update Equipment' if edit_doc else 'Add Equipment' }}</button>
+        </div>
+    </form>
+
+    <div style="margin-top:18px; padding:14px 18px; background:rgba(21,71,160,0.05); border:1px solid rgba(21,71,160,0.15); border-radius:10px; font-size:0.82rem; color:var(--text-muted); line-height:1.7;">
+        <strong style="color:var(--text); display:block; margin-bottom:6px;">Category Guide</strong>
+        <strong>Desktop Workstation</strong> — Covers full set: PC, Monitor, Keyboard, Mouse, AVR<br>
+        <strong>Multimedia & Display</strong> — Projectors, Smart TVs, Speakers<br>
+        <strong>Networking & Power</strong> — Routers, Switches, Standalone UPS<br>
+        <strong>Peripherals & Office</strong> — Printers, Scanners
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>Institutional Equipment Inventory ({{ rows|length }})</h2>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            {% if user and user.role == 'admin' %}
+            <a href="{{ url_for('import.equipment_import') }}" class="btn secondary btn-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Bulk Import CSV
+            </a>
+            {% endif %}
+            <a href="{{ url_for('qr.print_sheet') }}" class="btn secondary btn-sm" target="_blank">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                Print QR Codes
+            </a>
+        </div>
+    </div>
+    <input class="table-search" id="searchEquipment" type="search" placeholder="Search equipment by name, category, or lab…" onkeyup="filterTable('searchEquipment', 'equipmentTable')">
+    <div class="table-wrap">
+    <table id="equipmentTable">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>QR Code</th>
+                <th style="text-align:right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in rows %}
+          <tr>
+            <td><strong>{{ row.name|clean }}</strong></td>
+            <td>{{ row.category|clean }}</td>
+            <td>{{ row.location|clean }}</td>
+            <td><span class="{{ status_badge(row.status) }}">{{ row.status|clean }}</span></td>
+            <td>
+                {% if row.qr_code %}
+                    <img src="{{ row.qr_code }}" width="48" height="48" style="border-radius:6px;border:1px solid var(--line);background:#fff;display:block;" alt="QR" onerror="this.style.display='none'">
+                {% else %}
+                    <span style="color:var(--text-muted);font-size:0.8rem;">&mdash;</span>
+                {% endif %}
+            </td>
+            <td style="text-align:right;">
+                <div style="display:inline-flex;gap:6px;align-items:center;">
+                    <a class="btn secondary btn-sm" href="{{ url_for('equipment.index', edit=row.id|string) }}">Edit</a>
+                    <form method="post" action="{{ url_for('equipment.delete_equipment', equipment_id=row.id) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete equipment \'{{ row.name|clean }}\'?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn danger btn-sm">Delete</button>
+                    </form>
+                </div>
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">
+                No equipment assets found. Add an item above.
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% endblock %}
