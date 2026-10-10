@@ -30,7 +30,7 @@ def index():
                 cur.close()
                 return redirect(url_for("user_mgmt.index"))
 
-            cur.execute("SELECT id FROM users WHERE email=%s AND is_deleted=0 LIMIT 1", (email,))
+            cur.execute("SELECT id FROM users WHERE email=%s AND (is_deleted IS NULL OR is_deleted=0) LIMIT 1", (email,))
             if cur.fetchone():
                 flash("A user with this email address already exists.", "error")
                 cur.close()
@@ -71,7 +71,7 @@ def index():
             cur.close()
             return redirect(url_for("user_mgmt.index"))
 
-        cur.execute("SELECT id, name, email, role, created_at FROM users WHERE is_deleted=0 ORDER BY id ASC")
+        cur.execute("SELECT id, name, email, role, created_at FROM users WHERE (is_deleted IS NULL OR is_deleted=0) ORDER BY id ASC")
         users = cur.fetchall()
         cur.close()
         return render_template(

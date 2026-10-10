@@ -211,7 +211,7 @@ def index():
             all_labs_summary.append(row_data)
 
         # 1. Total institutional equipment count
-        cur.execute("SELECT COUNT(*) AS total FROM equipment WHERE is_deleted=0")
+        cur.execute("SELECT COUNT(*) AS total FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0)")
         total_equipment = cur.fetchone()["total"] or 0
 
         # 2. Overall KPI Counts within filter period
@@ -782,12 +782,12 @@ def manual_report():
             errors.extend(payload_errors)
 
             if not errors:
-                cur.execute("SELECT id FROM equipment WHERE id=%s AND is_deleted=0", (equipment_id,))
+                cur.execute("SELECT id FROM equipment WHERE id=%s AND (is_deleted IS NULL OR is_deleted=0)", (equipment_id,))
                 if not cur.fetchone():
                     errors.append("Selected equipment not found or inactive.")
 
             if errors:
-                cur.execute("SELECT id, name, category, location FROM equipment WHERE is_deleted=0 ORDER BY name ASC")
+                cur.execute("SELECT id, name, category, location FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0) ORDER BY name ASC")
                 equipment_list = cur.fetchall()
                 cur.close()
                 return render_template(
@@ -815,7 +815,7 @@ def manual_report():
             )
 
             # Trigger notifications for Technicians/Admins & Reporter confirmation
-            cur.execute("SELECT id FROM users WHERE role IN ('technician', 'admin') AND is_deleted=0")
+            cur.execute("SELECT id FROM users WHERE role IN ('technician', 'admin') AND (is_deleted IS NULL OR is_deleted=0)")
             recipients = [r["id"] for r in cur.fetchall()]
             if reporter_id and reporter_id not in recipients:
                 recipients.append(reporter_id)
@@ -839,7 +839,7 @@ def manual_report():
             return redirect(url_for("my_req.index"))
 
         # GET
-        cur.execute("SELECT id, name, category, location FROM equipment WHERE is_deleted=0 ORDER BY name ASC")
+        cur.execute("SELECT id, name, category, location FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0) ORDER BY name ASC")
         equipment_list = cur.fetchall()
         cur.close()
         return render_template(

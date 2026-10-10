@@ -54,7 +54,7 @@ def login():
             try:
                 cur = db.cursor(dictionary=True)
                 cur.execute(
-                    "SELECT id, name, email, role, password FROM users WHERE email=%s AND is_deleted=0 LIMIT 1",
+                    "SELECT id, name, email, role, password FROM users WHERE email=%s AND (is_deleted IS NULL OR is_deleted=0) LIMIT 1",
                     (email,),
                 )
                 user = cur.fetchone()

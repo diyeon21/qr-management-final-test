@@ -25,7 +25,7 @@ def save_maintenance_request(db, reporter_id, equipment_id, description, urgency
         return "Please describe the issue."
 
     cur = db.cursor(dictionary=True)
-    cur.execute("SELECT id FROM equipment WHERE id=%s AND is_deleted=0", (eq_oid,))
+    cur.execute("SELECT id FROM equipment WHERE id=%s AND (is_deleted IS NULL OR is_deleted=0)", (eq_oid,))
     if not cur.fetchone():
         cur.close()
         return "Equipment not found or inactive."
@@ -48,7 +48,7 @@ def save_maintenance_request(db, reporter_id, equipment_id, description, urgency
     )
 
     # Trigger notifications for Technicians/Admins & Reporter confirmation
-    cur.execute("SELECT id FROM users WHERE role IN ('technician', 'admin') AND is_deleted=0")
+    cur.execute("SELECT id FROM users WHERE role IN ('technician', 'admin') AND (is_deleted IS NULL OR is_deleted=0)")
     recipients = [r["id"] for r in cur.fetchall()]
     if reporter and reporter not in recipients:
         recipients.append(reporter)
@@ -90,7 +90,7 @@ def index():
         cur = db.cursor(dictionary=True)
         equipment = {}
         if eq_oid:
-            cur.execute("SELECT * FROM equipment WHERE id=%s AND is_deleted=0", (eq_oid,))
+            cur.execute("SELECT * FROM equipment WHERE id=%s AND (is_deleted IS NULL OR is_deleted=0)", (eq_oid,))
             equipment = cur.fetchone() or {}
 
         if request.method == "POST":

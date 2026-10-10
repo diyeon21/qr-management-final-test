@@ -31,7 +31,7 @@ def _make_qr_image_url(scan_page_url: str) -> str:
 
 
 def _load_equipment(cur, eq_oid):
-    cur.execute("SELECT * FROM equipment WHERE id=%s AND is_deleted=0", (eq_oid,))
+    cur.execute("SELECT * FROM equipment WHERE id=%s AND (is_deleted IS NULL OR is_deleted=0)", (eq_oid,))
     return cur.fetchone()
 
 
@@ -51,7 +51,7 @@ def index():
 
             errors, name, category, location, status = validate_equipment_payload(name, category, location, status)
             if errors:
-                cur.execute("SELECT * FROM equipment WHERE is_deleted=0 ORDER BY id DESC")
+                cur.execute("SELECT * FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0) ORDER BY id DESC")
                 rows = cur.fetchall()
                 cur.close()
                 return render_template("equipment.html", rows=rows, edit_doc=None, status_badge=status_badge, errors=errors), 400
@@ -105,7 +105,7 @@ def index():
             if edit_oid:
                 edit_doc = _load_equipment(cur, edit_oid)
 
-        cur.execute("SELECT * FROM equipment WHERE is_deleted=0 ORDER BY id DESC")
+        cur.execute("SELECT * FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0) ORDER BY id DESC")
         rows = cur.fetchall()
         cur.close()
         return render_template(

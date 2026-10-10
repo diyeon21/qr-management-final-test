@@ -8,7 +8,7 @@ qr_bp = Blueprint("qr", __name__, url_prefix="/qr")
 
 
 @qr_bp.route("/download/<equipment_id>")
-@role_required("custodian", "technician", "admin")
+@role_required("custodian", "technician", "admin", "faculty")
 def download(equipment_id):
     eq_oid = oid(equipment_id)
     if not eq_oid:
@@ -17,37 +17,50 @@ def download(equipment_id):
     db = get_db()
     try:
         cur = db.cursor(dictionary=True)
-        cur.execute("SELECT id AS _id, name, qr_code FROM equipment WHERE id=%s AND is_deleted=0", (eq_oid,))
+        cur.execute(
+            "SELECT id AS _id, name, qr_code FROM equipment WHERE id=%s AND (is_deleted IS NULL OR is_deleted=0)",
+            (eq_oid,)
+        )
         eq = cur.fetchone()
+
+        if not eq:
+            cur.close()
+            abort(404, "Equipment asset not found.")
+
+        qr_url = eq.get("qr_code")
+        if not qr_url:
+            from routes.equipment import equipment_scan_public_url, _make_qr_image_url
+            scan_url = equipment_scan_public_url(str(eq_oid), request)
+            qr_url = _make_qr_image_url(scan_url)
+            cur.execute("UPDATE equipment SET qr_code=%s WHERE id=%s", (qr_url, eq_oid))
+            db.commit()
+
         cur.close()
     finally:
         db.close()
 
-    if not eq or not eq.get("qr_code"):
-        abort(404, "QR code not found. Add the equipment first to generate its QR.")
-
-    qr_url = eq["qr_code"]
     name = re.sub(r'[^a-z0-9_\-]', '_', eq.get("name", "equipment"), flags=re.IGNORECASE)
     filename = f"QR_{name}.png"
 
     try:
-        resp = http_req.get(qr_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=10)
-        resp.raise_for_status()
-        image_data = resp.content
-        return Response(
-            image_data,
-            mimetype="image/png",
-            headers={
-                "Content-Disposition": f'attachment; filename="{filename}"',
-                "Cache-Control": "no-store",
-            }
-        )
+        resp = http_req.get(qr_url, headers={"User-Agent": "Mozilla/5.0"}, timeout=8)
+        if resp.status_code == 200 and resp.content:
+            return Response(
+                resp.content,
+                mimetype="image/png",
+                headers={
+                    "Content-Disposition": f'attachment; filename="{filename}"',
+                    "Cache-Control": "no-store",
+                }
+            )
     except Exception:
-        return redirect(qr_url)
+        pass
+
+    return redirect(qr_url)
 
 
 @qr_bp.route("/print")
-@role_required("custodian", "technician", "admin")
+@role_required("custodian", "technician", "admin", "faculty")
 def print_sheet():
     filter_ids = []
     ids_param = request.args.get("ids", "")
@@ -63,7 +76,7 @@ def print_sheet():
         base_sql = """
             SELECT id AS _id, name, category, location, qr_code
             FROM equipment
-            WHERE qr_code IS NOT NULL AND qr_code <> '' AND is_deleted=0
+            WHERE (is_deleted IS NULL OR is_deleted=0)
         """
         params = []
         if filter_ids:
@@ -72,7 +85,20 @@ def print_sheet():
             params.extend(filter_ids)
         base_sql += " ORDER BY name ASC"
         cur.execute(base_sql, tuple(params))
-        equipment = cur.fetchall()
+        equipment = cur.fetchall() or []
+
+        # Auto-generate QR codes for any items missing one
+        from routes.equipment import equipment_scan_public_url, _make_qr_image_url
+        needs_commit = False
+        for eq in equipment:
+            if not eq.get("qr_code"):
+                scan_url = equipment_scan_public_url(str(eq["_id"]), request)
+                eq["qr_code"] = _make_qr_image_url(scan_url)
+                cur.execute("UPDATE equipment SET qr_code=%s WHERE id=%s", (eq["qr_code"], eq["_id"]))
+                needs_commit = True
+        if needs_commit:
+            db.commit()
+
         cur.close()
     finally:
         db.close()
