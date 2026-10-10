@@ -79,12 +79,19 @@ def apply_security_headers(response):
 def health_check():
     """Production health check endpoint for monitoring, load balancers, and Docker."""
     db_status = "unknown"
+    table_columns = {}
     try:
         from models import get_db
         db = get_db()
         cur = db.cursor()
         cur.execute("SELECT 1")
         cur.fetchone()
+        for tbl in ["users", "equipment", "maintenance_requests", "maintenance_logs"]:
+            try:
+                cur.execute(f"SHOW COLUMNS FROM `{tbl}`")
+                table_columns[tbl] = [r[0] for r in cur.fetchall()]
+            except Exception as te:
+                table_columns[tbl] = f"error: {te}"
         cur.close()
         db.close()
         db_status = "connected"
@@ -92,14 +99,15 @@ def health_check():
         return jsonify({
             "status": "unhealthy",
             "database": f"error: {str(e)}",
-            "version": "1.0.0",
+            "version": "1.0.2",
         }), 503
 
     return jsonify({
         "status": "healthy",
         "database": db_status,
         "environment": config.ENV,
-        "version": "1.0.0",
+        "version": "1.0.2",
+        "table_columns": table_columns,
     }), 200
 
 
@@ -185,8 +193,8 @@ def internal_server_error(e):
     app.logger.error(f"Internal Server Error: {e}", exc_info=True)
     user = session.get("user")
     orig_err = getattr(e, "original_exception", e)
+    err_detail = f"An unexpected system error occurred: {orig_err}"
     if user:
-        err_detail = f"An unexpected system error occurred: {orig_err}" if user.get("role") == "admin" else "An unexpected system error occurred. Please try again or return to your dashboard."
         return render_template(
             "error.html",
             code=500,
@@ -194,7 +202,7 @@ def internal_server_error(e):
             message=err_detail,
             user=user
         ), 500
-    return render_template("login.html", error="A temporary server error occurred. Please try again later."), 500
+    return render_template("login.html", error=f"A server error occurred: {orig_err}"), 500
 
 
 if __name__ == "__main__":

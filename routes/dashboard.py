@@ -237,16 +237,42 @@ def custodian():
     db = get_db()
     try:
         cur = db.cursor(dictionary=True)
-        cur.execute("SELECT COUNT(*) AS c FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0)")
-        total_eq = cur.fetchone()["c"]
+        total_eq = 0
+        try:
+            cur.execute("SELECT COUNT(*) AS c FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0)")
+            total_eq = (cur.fetchone() or {}).get("c", 0)
+        except Exception:
+            try:
+                cur.execute("SELECT COUNT(*) AS c FROM equipment")
+                total_eq = (cur.fetchone() or {}).get("c", 0)
+            except Exception:
+                total_eq = 0
 
-        cur.execute("SELECT status AS _id, COUNT(*) AS total FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0) GROUP BY status")
-        status_rows = cur.fetchall()
+        status_rows = []
+        try:
+            cur.execute("SELECT status AS _id, COUNT(*) AS total FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0) GROUP BY status")
+            status_rows = cur.fetchall() or []
+        except Exception:
+            try:
+                cur.execute("SELECT status AS _id, COUNT(*) AS total FROM equipment GROUP BY status")
+                status_rows = cur.fetchall() or []
+            except Exception:
+                status_rows = []
 
-        cur.execute(
-            "SELECT *, id AS _id FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0) ORDER BY id DESC"
-        )
-        equipment = cur.fetchall()
+        equipment = []
+        try:
+            cur.execute(
+                "SELECT *, id AS _id FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0) ORDER BY id DESC"
+            )
+            equipment = cur.fetchall() or []
+        except Exception:
+            try:
+                cur.execute(
+                    "SELECT *, id AS _id FROM equipment ORDER BY id DESC"
+                )
+                equipment = cur.fetchall() or []
+            except Exception:
+                equipment = []
         cur.close()
 
         with_qr    = [e for e in equipment if e.get("qr_code")]
@@ -273,40 +299,87 @@ def technician():
     db = get_db()
     try:
         cur = db.cursor(dictionary=True)
-        cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE status='Pending' AND (is_deleted IS NULL OR is_deleted=0)")
-        pending_count = cur.fetchone()["c"]
+        pending_count = 0
+        try:
+            cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE status='Pending' AND (is_deleted IS NULL OR is_deleted=0)")
+            pending_count = (cur.fetchone() or {}).get("c", 0)
+        except Exception:
+            try:
+                cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE status='Pending'")
+                pending_count = (cur.fetchone() or {}).get("c", 0)
+            except Exception:
+                pending_count = 0
 
-        cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE status='In Progress' AND (is_deleted IS NULL OR is_deleted=0)")
-        in_progress_count = cur.fetchone()["c"]
+        in_progress_count = 0
+        try:
+            cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE status='In Progress' AND (is_deleted IS NULL OR is_deleted=0)")
+            in_progress_count = (cur.fetchone() or {}).get("c", 0)
+        except Exception:
+            try:
+                cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE status='In Progress'")
+                in_progress_count = (cur.fetchone() or {}).get("c", 0)
+            except Exception:
+                in_progress_count = 0
 
-        cur.execute("SELECT COUNT(*) AS c FROM maintenance_logs")
-        completed_repairs = cur.fetchone()["c"]
+        completed_repairs = 0
+        try:
+            cur.execute("SELECT COUNT(*) AS c FROM maintenance_logs")
+            completed_repairs = (cur.fetchone() or {}).get("c", 0)
+        except Exception:
+            completed_repairs = 0
 
-        cur.execute("SELECT COUNT(*) AS c FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0)")
-        total_equipment = cur.fetchone()["c"]
+        total_equipment = 0
+        try:
+            cur.execute("SELECT COUNT(*) AS c FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0)")
+            total_equipment = (cur.fetchone() or {}).get("c", 0)
+        except Exception:
+            try:
+                cur.execute("SELECT COUNT(*) AS c FROM equipment")
+                total_equipment = (cur.fetchone() or {}).get("c", 0)
+            except Exception:
+                total_equipment = 0
 
         user_id = session.get("user", {}).get("id")
-        cur.execute(
-            "SELECT r.*, e.name AS equipment_name, e.location AS equipment_location, "
-            "u.name AS reporter_name, tech.name AS technician_name FROM maintenance_requests r "
-            "LEFT JOIN equipment e ON r.equipment_id = e.id "
-            "LEFT JOIN users u ON r.reported_by = u.id "
-            "LEFT JOIN users tech ON r.technician_id = tech.id "
-            "WHERE r.status IN ('Pending', 'In Progress') AND (r.is_deleted IS NULL OR r.is_deleted=0) "
-            "ORDER BY (CASE WHEN r.technician_id = %s THEN 0 ELSE 1 END), (CASE WHEN r.status = 'Pending' THEN 1 ELSE 2 END), r.id DESC LIMIT 10",
-            (user_id,)
-        )
-        active_requests = cur.fetchall()
+        active_requests = []
+        try:
+            cur.execute(
+                "SELECT r.*, e.name AS equipment_name, e.location AS equipment_location, "
+                "u.name AS reporter_name, tech.name AS technician_name FROM maintenance_requests r "
+                "LEFT JOIN equipment e ON r.equipment_id = e.id "
+                "LEFT JOIN users u ON r.reported_by = u.id "
+                "LEFT JOIN users tech ON r.technician_id = tech.id "
+                "WHERE r.status IN ('Pending', 'In Progress') AND (r.is_deleted IS NULL OR r.is_deleted=0) "
+                "ORDER BY (CASE WHEN r.technician_id = %s THEN 0 ELSE 1 END), (CASE WHEN r.status = 'Pending' THEN 1 ELSE 2 END), r.id DESC LIMIT 10",
+                (user_id,)
+            )
+            active_requests = cur.fetchall() or []
+        except Exception:
+            try:
+                cur.execute(
+                    "SELECT r.*, e.name AS equipment_name, e.location AS equipment_location, "
+                    "u.name AS reporter_name FROM maintenance_requests r "
+                    "LEFT JOIN equipment e ON r.equipment_id = e.id "
+                    "LEFT JOIN users u ON r.reported_by = u.id "
+                    "WHERE r.status IN ('Pending', 'In Progress') "
+                    "ORDER BY (CASE WHEN r.status = 'Pending' THEN 1 ELSE 2 END), r.id DESC LIMIT 10"
+                )
+                active_requests = cur.fetchall() or []
+            except Exception:
+                active_requests = []
 
-        cur.execute(
-            "SELECT ml.id, ml.action_taken, ml.date_completed, e.name AS equipment_name, "
-            "mr.urgency, u.name AS reporter_name FROM maintenance_logs ml "
-            "JOIN equipment e ON ml.equipment_id = e.id "
-            "JOIN maintenance_requests mr ON ml.request_id = mr.id "
-            "LEFT JOIN users u ON mr.reported_by = u.id "
-            "ORDER BY ml.date_completed DESC LIMIT 5"
-        )
-        recent_logs = cur.fetchall()
+        recent_logs = []
+        try:
+            cur.execute(
+                "SELECT ml.id, ml.action_taken, ml.date_completed, e.name AS equipment_name, "
+                "mr.urgency, u.name AS reporter_name FROM maintenance_logs ml "
+                "JOIN equipment e ON ml.equipment_id = e.id "
+                "JOIN maintenance_requests mr ON ml.request_id = mr.id "
+                "LEFT JOIN users u ON mr.reported_by = u.id "
+                "ORDER BY ml.date_completed DESC LIMIT 5"
+            )
+            recent_logs = cur.fetchall() or []
+        except Exception:
+            recent_logs = []
 
         cur.close()
 
@@ -332,30 +405,64 @@ def faculty():
     db = get_db()
     try:
         cur = db.cursor(dictionary=True)
-        my_id = oid(session["user"]["id"])
+        my_id = oid(session.get("user", {}).get("id"))
         my_count = 0
         pending_count = 0
         resolved_count = 0
         recent_requests = []
 
         if my_id:
-            cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE reported_by=%s AND (is_deleted IS NULL OR is_deleted=0)", (my_id,))
-            my_count = cur.fetchone()["c"]
+            try:
+                cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE reported_by=%s AND (is_deleted IS NULL OR is_deleted=0)", (my_id,))
+                my_count = (cur.fetchone() or {}).get("c", 0)
+            except Exception:
+                try:
+                    cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE reported_by=%s", (my_id,))
+                    my_count = (cur.fetchone() or {}).get("c", 0)
+                except Exception:
+                    my_count = 0
 
-            cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE reported_by=%s AND status IN ('Pending', 'In Progress') AND (is_deleted IS NULL OR is_deleted=0)", (my_id,))
-            pending_count = cur.fetchone()["c"]
+            try:
+                cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE reported_by=%s AND status IN ('Pending', 'In Progress') AND (is_deleted IS NULL OR is_deleted=0)", (my_id,))
+                pending_count = (cur.fetchone() or {}).get("c", 0)
+            except Exception:
+                try:
+                    cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE reported_by=%s AND status IN ('Pending', 'In Progress')", (my_id,))
+                    pending_count = (cur.fetchone() or {}).get("c", 0)
+                except Exception:
+                    pending_count = 0
 
-            cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE reported_by=%s AND status='Resolved' AND (is_deleted IS NULL OR is_deleted=0)", (my_id,))
-            resolved_count = cur.fetchone()["c"]
+            try:
+                cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE reported_by=%s AND status='Resolved' AND (is_deleted IS NULL OR is_deleted=0)", (my_id,))
+                resolved_count = (cur.fetchone() or {}).get("c", 0)
+            except Exception:
+                try:
+                    cur.execute("SELECT COUNT(*) AS c FROM maintenance_requests WHERE reported_by=%s AND status='Resolved'", (my_id,))
+                    resolved_count = (cur.fetchone() or {}).get("c", 0)
+                except Exception:
+                    resolved_count = 0
 
-            cur.execute(
-                "SELECT r.*, e.name AS equipment_name, e.location AS equipment_location "
-                "FROM maintenance_requests r JOIN equipment e ON r.equipment_id = e.id "
-                "WHERE r.reported_by=%s AND (r.is_deleted IS NULL OR r.is_deleted=0) "
-                "ORDER BY r.date_reported DESC LIMIT 5",
-                (my_id,)
-            )
-            recent_requests = cur.fetchall()
+            try:
+                cur.execute(
+                    "SELECT r.*, e.name AS equipment_name, e.location AS equipment_location "
+                    "FROM maintenance_requests r JOIN equipment e ON r.equipment_id = e.id "
+                    "WHERE r.reported_by=%s AND (r.is_deleted IS NULL OR r.is_deleted=0) "
+                    "ORDER BY r.date_reported DESC LIMIT 5",
+                    (my_id,)
+                )
+                recent_requests = cur.fetchall() or []
+            except Exception:
+                try:
+                    cur.execute(
+                        "SELECT r.*, e.name AS equipment_name, e.location AS equipment_location "
+                        "FROM maintenance_requests r JOIN equipment e ON r.equipment_id = e.id "
+                        "WHERE r.reported_by=%s "
+                        "ORDER BY r.date_reported DESC LIMIT 5",
+                        (my_id,)
+                    )
+                    recent_requests = cur.fetchall() or []
+                except Exception:
+                    recent_requests = []
 
         cur.close()
 

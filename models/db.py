@@ -12,47 +12,58 @@ _initialized = False
 
 def get_db():
     global _pool, _initialized
+    conn_kwargs = {
+        "host": config.MYSQL_HOST,
+        "port": config.MYSQL_PORT,
+        "user": config.MYSQL_USER,
+        "password": config.MYSQL_PASSWORD,
+        "database": config.MYSQL_DB,
+        "ssl_disabled": getattr(config, "MYSQL_SSL_DISABLED", True),
+        "autocommit": False,
+    }
+    if getattr(config, "MYSQL_SSL_CA", ""):
+        conn_kwargs["ssl_ca"] = config.MYSQL_SSL_CA
+
     if _pool is None:
-        conn_kwargs = {
-            "host": config.MYSQL_HOST,
-            "port": config.MYSQL_PORT,
-            "user": config.MYSQL_USER,
-            "password": config.MYSQL_PASSWORD,
-            "ssl_disabled": getattr(config, "MYSQL_SSL_DISABLED", True),
-        }
-        if getattr(config, "MYSQL_SSL_CA", ""):
-            conn_kwargs["ssl_ca"] = config.MYSQL_SSL_CA
-
-
         try:
-            bootstrap = mysql.connector.connect(**conn_kwargs)
+            boot_kwargs = dict(conn_kwargs)
+            boot_kwargs.pop("database", None)
+            bootstrap = mysql.connector.connect(**boot_kwargs)
             bcur = bootstrap.cursor()
             bcur.execute(f"CREATE DATABASE IF NOT EXISTS `{config.MYSQL_DB}`")
             bootstrap.commit()
             bcur.close()
             bootstrap.close()
         except Exception:
-            # In managed cloud databases (e.g. TiDB, RDS, Clever Cloud), user may not have CREATE DATABASE permissions
             pass
 
-        pool_size = max(1, min(32, getattr(config, "MYSQL_POOL_SIZE", 8)))
-        _pool = pooling.MySQLConnectionPool(
-            pool_name="webbased_pool",
-            pool_size=pool_size,
-            database=config.MYSQL_DB,
-            autocommit=False,
-            **conn_kwargs,
-        )
+        pool_size = max(5, min(32, getattr(config, "MYSQL_POOL_SIZE", 16)))
+        try:
+            _pool = pooling.MySQLConnectionPool(
+                pool_name="webbased_pool",
+                pool_size=pool_size,
+                **conn_kwargs,
+            )
+        except Exception:
+            _pool = None
 
+    cnx = None
+    if _pool is not None:
+        try:
+            cnx = _pool.get_connection()
+        except Exception:
+            cnx = None
 
-    cnx = _pool.get_connection()
+    if cnx is None:
+        cnx = mysql.connector.connect(**conn_kwargs)
+
     try:
         cnx.ping(reconnect=True, attempts=3, delay=1)
     except Exception:
         pass
 
     if not _initialized:
-        cur = cnx.cursor()
+        cur = cnx.cursor(buffered=True)
         
         tables = [
             """
@@ -142,65 +153,73 @@ def get_db():
             except Exception:
                 pass
 
-        migrations = [
-            "ALTER TABLE users MODIFY COLUMN role ENUM('admin','custodian','technician','faculty') NOT NULL DEFAULT 'faculty'",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL",
-            "ALTER TABLE equipment ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0",
-            "ALTER TABLE equipment ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL",
-            "ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0",
-            "ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL",
-            "ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS technician_id INT NULL",
-            "ALTER TABLE maintenance_requests ADD CONSTRAINT fk_technician FOREIGN KEY (technician_id) REFERENCES users(id) ON DELETE SET NULL",
-            "ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS affected_component VARCHAR(100) NULL",
-            "ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS repair_start DATETIME NULL",
-            "ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS technician_notes TEXT NULL",
-            "ALTER TABLE maintenance_logs ADD COLUMN IF NOT EXISTS repair_start DATETIME NULL",
-            "ALTER TABLE maintenance_logs ADD COLUMN IF NOT EXISTS duration_minutes INT NULL",
-            "ALTER TABLE maintenance_logs ADD COLUMN IF NOT EXISTS technician_id INT NULL",
+        columns_to_ensure = [
+            ("users", "is_deleted", "TINYINT(1) NOT NULL DEFAULT 0"),
+            ("users", "deleted_at", "DATETIME NULL"),
+            ("equipment", "is_deleted", "TINYINT(1) NOT NULL DEFAULT 0"),
+            ("equipment", "deleted_at", "DATETIME NULL"),
+            ("maintenance_requests", "is_deleted", "TINYINT(1) NOT NULL DEFAULT 0"),
+            ("maintenance_requests", "deleted_at", "DATETIME NULL"),
+            ("maintenance_requests", "technician_id", "INT NULL"),
+            ("maintenance_requests", "affected_component", "VARCHAR(100) NULL"),
+            ("maintenance_requests", "repair_start", "DATETIME NULL"),
+            ("maintenance_requests", "technician_notes", "TEXT NULL"),
+            ("maintenance_logs", "repair_start", "DATETIME NULL"),
+            ("maintenance_logs", "duration_minutes", "INT NULL"),
+            ("maintenance_logs", "technician_id", "INT NULL"),
         ]
 
-        for mig in migrations:
+        for tbl, col, col_def in columns_to_ensure:
             try:
-                cur.execute(mig)
-                cnx.commit()
+                cur.execute(f"SHOW COLUMNS FROM `{tbl}` LIKE %s", (col,))
+                existing_cols = cur.fetchall()
+                if not existing_cols:
+                    cur.execute(f"ALTER TABLE `{tbl}` ADD COLUMN `{col}` {col_def}")
+                    cnx.commit()
             except Exception:
-                if "ADD COLUMN IF NOT EXISTS" in mig:
-                    try:
-                        fallback = mig.replace("ADD COLUMN IF NOT EXISTS", "ADD COLUMN")
-                        cur.execute(fallback)
-                        cnx.commit()
-                    except Exception:
-                        pass
+                try:
+                    cur.execute(f"ALTER TABLE `{tbl}` ADD COLUMN IF NOT EXISTS `{col}` {col_def}")
+                    cnx.commit()
+                except Exception:
+                    pass
+
+        try:
+            cur.execute("ALTER TABLE users MODIFY COLUMN role ENUM('admin','custodian','technician','faculty') NOT NULL DEFAULT 'faculty'")
+            cnx.commit()
+        except Exception:
+            pass
+
+        try:
+            cur.execute("ALTER TABLE maintenance_requests ADD CONSTRAINT fk_technician FOREIGN KEY (technician_id) REFERENCES users(id) ON DELETE SET NULL")
+            cnx.commit()
+        except Exception:
+            pass
 
         # Performance indexes for frequent queries, joins, and filtering
-        indexes = [
-            "CREATE INDEX IF NOT EXISTS idx_users_role ON users (role)",
-            "CREATE INDEX IF NOT EXISTS idx_equipment_status ON equipment (status)",
-            "CREATE INDEX IF NOT EXISTS idx_equipment_category ON equipment (category)",
-            "CREATE INDEX IF NOT EXISTS idx_equipment_is_deleted ON equipment (is_deleted)",
-            "CREATE INDEX IF NOT EXISTS idx_mr_status ON maintenance_requests (status)",
-            "CREATE INDEX IF NOT EXISTS idx_mr_date_reported ON maintenance_requests (date_reported)",
-            "CREATE INDEX IF NOT EXISTS idx_mr_reported_by ON maintenance_requests (reported_by)",
-            "CREATE INDEX IF NOT EXISTS idx_mr_equipment_id ON maintenance_requests (equipment_id)",
-            "CREATE INDEX IF NOT EXISTS idx_ml_equipment_id ON maintenance_logs (equipment_id)",
-            "CREATE INDEX IF NOT EXISTS idx_ml_request_id ON maintenance_logs (request_id)",
-            "CREATE INDEX IF NOT EXISTS idx_ml_date_completed ON maintenance_logs (date_completed)",
-            "CREATE INDEX IF NOT EXISTS idx_act_created_at ON activity_logs (created_at)",
-            "CREATE INDEX IF NOT EXISTS idx_notif_user_read ON notifications (user_id, is_read)",
+        indexes_to_ensure = [
+            ("users", "idx_users_role", "role"),
+            ("equipment", "idx_equipment_status", "status"),
+            ("equipment", "idx_equipment_category", "category"),
+            ("equipment", "idx_equipment_is_deleted", "is_deleted"),
+            ("maintenance_requests", "idx_mr_status", "status"),
+            ("maintenance_requests", "idx_mr_date_reported", "date_reported"),
+            ("maintenance_requests", "idx_mr_reported_by", "reported_by"),
+            ("maintenance_requests", "idx_mr_equipment_id", "equipment_id"),
+            ("maintenance_logs", "idx_ml_equipment_id", "equipment_id"),
+            ("maintenance_logs", "idx_ml_request_id", "request_id"),
+            ("maintenance_logs", "idx_ml_date_completed", "date_completed"),
+            ("activity_logs", "idx_act_created_at", "created_at"),
+            ("notifications", "idx_notif_user_read", "user_id, is_read"),
         ]
-        for idx_sql in indexes:
+        for tbl, idx_name, idx_cols in indexes_to_ensure:
             try:
-                cur.execute(idx_sql)
-                cnx.commit()
+                cur.execute(f"SHOW INDEX FROM `{tbl}` WHERE Key_name = %s", (idx_name,))
+                existing_idxs = cur.fetchall()
+                if not existing_idxs:
+                    cur.execute(f"CREATE INDEX `{idx_name}` ON `{tbl}` ({idx_cols})")
+                    cnx.commit()
             except Exception:
-                if "CREATE INDEX IF NOT EXISTS" in idx_sql:
-                    try:
-                        fallback_idx = idx_sql.replace("CREATE INDEX IF NOT EXISTS", "CREATE INDEX")
-                        cur.execute(fallback_idx)
-                        cnx.commit()
-                    except Exception:
-                        pass
+                pass
 
         cur.close()
         _initialized = True
