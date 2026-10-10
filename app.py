@@ -70,6 +70,8 @@ def apply_security_headers(response):
         response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
+    elif request.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "public, max-age=2592000"
     return response
 
 
