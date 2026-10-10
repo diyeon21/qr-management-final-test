@@ -128,6 +128,7 @@
             </label>
             <select name="equipment_id" id="equipment_id" required style="width:100%;"
                     onchange="updateEquipmentInfo(this)">
+                {% if equipment_list %}
                 <option value="">— Select equipment —</option>
                 {% for eq in equipment_list %}
                 <option value="{{ eq.id }}"
@@ -137,7 +138,15 @@
                     {{ eq.name|clean }}{% if eq.category %} · {{ eq.category|clean }}{% endif %}{% if eq.location %} ({{ eq.location|clean }}){% endif %}
                 </option>
                 {% endfor %}
+                {% else %}
+                <option value="" disabled selected>No equipment registered in system yet</option>
+                {% endif %}
             </select>
+            {% if not equipment_list %}
+            <p style="margin-top:8px; font-size:0.82rem; color:#f59e0b;">
+                ⚠️ No equipment has been added to the inventory yet. An Administrator or Custodian must add equipment first.
+            </p>
+            {% endif %}
             <div id="equipmentInfo" class="eq-info-box">
                 <strong>Category:</strong> <span id="infoCategory">—</span> &nbsp;|&nbsp;
                 <strong>Location:</strong> <span id="infoLocation">—</span>
