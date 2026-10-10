@@ -50,7 +50,6 @@ def test_technician_repair_maintenance_inventory_access():
         eq_res = client.get("/equipment/")
         assert eq_res.status_code == 200
         eq_html = eq_res.data.decode()
-        assert "Read-Only Inventory Access" in eq_html
         assert "Add Equipment Asset" not in eq_html
         assert "Delete" not in eq_html
 

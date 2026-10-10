@@ -99,14 +99,14 @@ def health_check():
         return jsonify({
             "status": "unhealthy",
             "database": f"error: {str(e)}",
-            "version": "1.0.5",
+            "version": "1.0.6",
         }), 503
 
     return jsonify({
         "status": "healthy",
         "database": db_status,
         "environment": config.ENV,
-        "version": "1.0.5",
+        "version": "1.0.6",
         "table_columns": table_columns,
     }), 200
 
