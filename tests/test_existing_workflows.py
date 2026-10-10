@@ -64,3 +64,21 @@ def test_faculty_dashboard_manual_report_and_scan_work():
         assert client.get("/equipment/").status_code == 403
         assert client.get("/maintenance_requests/").status_code == 403
         assert client.get("/logbook/").status_code == 403
+
+
+def test_qr_print_and_download_links():
+    flask_app.config.update(TESTING=True)
+    with flask_app.test_client() as client:
+        _set_session(client, "custodian")
+        res = client.get("/qr/print")
+        assert res.status_code == 200
+        html = res.data.decode()
+        # Verify no broken 'download/' or 'download/None' links
+        assert "/qr/download/None" not in html
+        assert 'href="/qr/download/"' not in html
+
+        # Verify missing or 'None' equipment_id gracefully redirects instead of 404
+        assert client.get("/qr/download").status_code == 302
+        assert client.get("/qr/download/").status_code == 302
+        assert client.get("/qr/download/None").status_code == 302
+

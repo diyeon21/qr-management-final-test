@@ -88,13 +88,13 @@
             <div style="font-size:0.88rem;font-weight:700;color:var(--text);margin-bottom:2px;word-break:break-word;">{{ eq.name|clean }}</div>
             <div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:12px;">{{ eq.category|clean }}{% if eq.category and eq.location %} &middot; {% endif %}{{ eq.location|clean }}</div>
             <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
-                <a href="{{ url_for('qr.download', equipment_id=eq.id|string) }}"
+                <a href="{{ url_for('qr.download', equipment_id=(eq.id or eq._id)|string) }}"
                    class="btn btn-sm"
                    title="Download QR as PNG">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     Download
                 </a>
-                <a href="{{ url_for('qr.print_sheet', ids=eq.id|string) }}"
+                <a href="{{ url_for('qr.print_sheet', ids=(eq.id or eq._id)|string) }}"
                    class="btn secondary btn-sm"
                    target="_blank"
                    title="Print this QR code">
@@ -156,11 +156,11 @@
                     <div style="display:flex;align-items:center;gap:8px;">
                         <img src="{{ eq.qr_code }}" width="40" height="40"
                              style="border-radius:4px;border:1px solid var(--line);background:#fff;" alt="QR">
-                        <a href="{{ url_for('qr.download', equipment_id=eq.id|string) }}"
+                        <a href="{{ url_for('qr.download', equipment_id=(eq.id or eq._id)|string) }}"
                            class="btn secondary btn-sm" title="Download QR">↓</a>
                     </div>
                 {% else %}
-                    <a href="{{ url_for('equipment.index', edit=eq.id|string) }}"
+                    <a href="{{ url_for('equipment.index', edit=(eq.id or eq._id)|string) }}"
                        class="btn secondary btn-sm">Generate</a>
                 {% endif %}
             </td>

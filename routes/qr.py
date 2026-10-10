@@ -7,18 +7,23 @@ from routes.decorators import role_required
 qr_bp = Blueprint("qr", __name__, url_prefix="/qr")
 
 
+@qr_bp.route("/download")
+@qr_bp.route("/download/")
 @qr_bp.route("/download/<equipment_id>")
 @role_required("custodian", "technician", "admin", "faculty")
-def download(equipment_id):
+def download(equipment_id=None):
+    if not equipment_id or str(equipment_id).strip().lower() in ("none", "null", ""):
+        return redirect(url_for("qr.print_sheet"))
+
     eq_oid = oid(equipment_id)
     if not eq_oid:
-        abort(400, "Invalid equipment ID.")
+        return redirect(url_for("qr.print_sheet"))
 
     db = get_db()
     try:
         cur = db.cursor(dictionary=True)
         cur.execute(
-            "SELECT id AS _id, name, qr_code FROM equipment WHERE id=%s AND (is_deleted IS NULL OR is_deleted=0)",
+            "SELECT id, id AS _id, name, qr_code FROM equipment WHERE id=%s AND (is_deleted IS NULL OR is_deleted=0)",
             (eq_oid,)
         )
         eq = cur.fetchone()
@@ -74,7 +79,7 @@ def print_sheet():
     try:
         cur = db.cursor(dictionary=True)
         base_sql = """
-            SELECT id AS _id, name, category, location, qr_code
+            SELECT id, id AS _id, name, category, location, qr_code
             FROM equipment
             WHERE (is_deleted IS NULL OR is_deleted=0)
         """
