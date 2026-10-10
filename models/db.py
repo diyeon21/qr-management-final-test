@@ -94,6 +94,7 @@ def get_db():
             cur.execute("ALTER TABLE maintenance_requests ADD CONSTRAINT fk_technician FOREIGN KEY (technician_id) REFERENCES users(id) ON DELETE SET NULL")
         except Exception:
             pass  # Constraint may already exist
+        cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0")
         cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL")
         cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS affected_component VARCHAR(100) NULL")
         cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS repair_start DATETIME NULL")
