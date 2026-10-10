@@ -140,7 +140,7 @@
     <div class="sidebar-backdrop no-print" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
     {% endif %}
 
-    <!-- Main Content Workspace (Leaves NO empty space!) -->
+    <!-- Main Content Workspace -->
     <div class="app-main">
         {% if user %}
         <header class="app-topbar no-print">
@@ -196,7 +196,7 @@
         </header>
         {% endif %}
 
-        <!-- Main Full-Width Content Container (Leaves NO empty space!) -->
+        <!-- Main Content Container -->
         <main class="container">
             {% block content %}{% endblock %}
         </main>
