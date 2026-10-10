@@ -43,7 +43,12 @@ def index():
     try:
         cur = db.cursor(dictionary=True)
 
+        user_role = session.get("user", {}).get("role")
+
         if request.method == "POST":
+            if user_role not in ("admin", "custodian"):
+                abort(403, "Technicians have read-only access to equipment inventory.")
+
             name     = normalize_text(request.form.get("name"))
             category = normalize_text(request.form.get("category"))
             location = normalize_text(request.form.get("location"))
@@ -88,6 +93,8 @@ def index():
 
         # Fallback query parameter deletion (guarded by role_required)
         if "delete" in request.args:
+            if user_role not in ("admin", "custodian"):
+                abort(403, "Technicians cannot delete equipment.")
             del_id = oid(request.args["delete"])
             if del_id:
                 cur.execute("UPDATE equipment SET is_deleted=1, deleted_at=%s WHERE id=%s", (now_utc().replace(tzinfo=None), del_id))
@@ -100,7 +107,7 @@ def index():
             return redirect(url_for("equipment.index"))
 
         edit_doc = None
-        if "edit" in request.args:
+        if "edit" in request.args and user_role in ("admin", "custodian"):
             edit_oid = oid(request.args["edit"])
             if edit_oid:
                 edit_doc = _load_equipment(cur, edit_oid)
@@ -120,7 +127,7 @@ def index():
 
 @equipment_bp.route("/delete/<int:equipment_id>", methods=["POST"], endpoint="delete")
 @equipment_bp.route("/delete_equipment/<int:equipment_id>", methods=["POST"], endpoint="delete_equipment")
-@role_required("custodian", "technician", "admin")
+@role_required("custodian", "admin")
 @csrf_protect
 def delete_equipment(equipment_id):
     db = get_db()

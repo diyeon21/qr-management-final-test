@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% if user and user.role in ['admin', 'custodian'] %}
 <div class="card">
     <div class="card-header">
         <h2>{{ 'Edit Equipment' if edit_doc else 'Add Equipment Asset' }}</h2>
@@ -57,6 +58,17 @@
         <strong>Peripherals & Office</strong> — Printers, Scanners
     </div>
 </div>
+{% else %}
+<div class="card" style="padding: 16px 20px; background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 10px; margin-bottom: 24px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        <div>
+            <strong style="color: var(--text); font-size: 0.92rem;">Read-Only Inventory Access</strong>
+            <p style="margin: 2px 0 0; font-size: 0.82rem; color: var(--text-muted);">You have view and QR download privileges. Adding, editing, and deleting equipment records is restricted to Custodians and Administrators.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="card">
     <div class="card-header">
@@ -106,18 +118,24 @@
             <td style="text-align:right;">
                 <div style="display:inline-flex;gap:6px;align-items:center;">
                     <a class="btn secondary btn-sm" href="{{ url_for('qr.download', equipment_id=(row.id or row._id)|string) }}" title="Download QR Code">QR &darr;</a>
+                    {% if user and user.role in ['admin', 'custodian'] %}
                     <a class="btn secondary btn-sm" href="{{ url_for('equipment.index', edit=(row.id or row._id)|string) }}">Edit</a>
                     <form method="post" action="{{ url_for('equipment.delete_equipment', equipment_id=(row.id or row._id)) }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete equipment \'{{ row.name|clean }}\'?');">
                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button type="submit" class="btn danger btn-sm">Delete</button>
                     </form>
+                    {% endif %}
                 </div>
             </td>
           </tr>
         {% else %}
           <tr>
             <td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">
+                {% if user and user.role in ['admin', 'custodian'] %}
                 No equipment assets found. Add an item above.
+                {% else %}
+                No equipment assets found.
+                {% endif %}
             </td>
           </tr>
         {% endfor %}

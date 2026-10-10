@@ -45,7 +45,20 @@ def test_technician_repair_maintenance_inventory_access():
         assert client.get("/dashboard/technician").status_code == 200
         assert client.get("/maintenance_requests/").status_code == 200
         assert client.get("/logbook/").status_code == 200
-        assert client.get("/equipment/").status_code == 200
+        
+        # Technician has read-only access to equipment inventory
+        eq_res = client.get("/equipment/")
+        assert eq_res.status_code == 200
+        eq_html = eq_res.data.decode()
+        assert "Read-Only Inventory Access" in eq_html
+        assert "Add Equipment Asset" not in eq_html
+        assert "Delete" not in eq_html
+
+        # Technician blocked from Add / Edit / Delete POST actions
+        assert client.post("/equipment/", data={"name": "Test PC", "csrf_token": "token"}).status_code in (400, 403)
+        assert client.post("/equipment/delete/1", data={"csrf_token": "token"}).status_code == 403
+        assert client.get("/equipment/?delete=1").status_code == 403
+
         assert client.get("/scan").status_code == 200
         # Technician restricted from admin-only sections
         assert client.get("/user_management/").status_code == 403
@@ -56,11 +69,15 @@ def test_faculty_dashboard_manual_report_and_scan_work():
     flask_app.config.update(TESTING=True)
     with flask_app.test_client() as client:
         _set_session(client, "faculty")
-        assert client.get("/dashboard/faculty").status_code == 200
+        fac_dash = client.get("/dashboard/faculty")
+        assert fac_dash.status_code == 200
+        # Verify Equipment Inventory is NOT in faculty navigation
+        assert "Equipment Inventory" not in fac_dash.data.decode()
+
         assert client.get("/admin_reports/manual_report").status_code == 200
         assert client.get("/scan").status_code == 200
         assert client.get("/my_requests/").status_code == 200
-        # Faculty restricted from custodian/technician/admin management
+        # Faculty strictly restricted from equipment inventory
         assert client.get("/equipment/").status_code == 403
         assert client.get("/maintenance_requests/").status_code == 403
         assert client.get("/logbook/").status_code == 403
