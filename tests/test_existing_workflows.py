@@ -45,9 +45,9 @@ def test_technician_repair_maintenance_inventory_access():
         assert client.get("/dashboard/technician").status_code == 200
         assert client.get("/maintenance_requests/").status_code == 200
         assert client.get("/logbook/").status_code == 200
-        assert client.get("/equipment/").status_code == 200
+        assert client.get("/equipment/").status_code == 403
         assert client.get("/scan").status_code == 200
-        # Technician restricted from admin-only sections
+        # Technician restricted from admin-only sections and equipment inventory
         assert client.get("/user_management/").status_code == 403
         assert client.get("/admin_reports/").status_code == 403
 

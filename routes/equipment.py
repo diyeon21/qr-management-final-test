@@ -36,7 +36,7 @@ def _load_equipment(cur, eq_oid):
 
 
 @equipment_bp.route("/", methods=["GET", "POST"])
-@role_required("custodian", "technician", "admin")
+@role_required("admin", "custodian")
 @csrf_protect
 def index():
     db = get_db()
@@ -120,7 +120,7 @@ def index():
 
 @equipment_bp.route("/delete/<int:equipment_id>", methods=["POST"], endpoint="delete")
 @equipment_bp.route("/delete_equipment/<int:equipment_id>", methods=["POST"], endpoint="delete_equipment")
-@role_required("custodian", "technician", "admin")
+@role_required("admin", "custodian")
 @csrf_protect
 def delete_equipment(equipment_id):
     db = get_db()
