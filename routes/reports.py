@@ -32,7 +32,7 @@ def _format_duration(hours):
         total_seconds = int(float(hours) * 3600)
     except Exception:
         return "—"
-    if total_seconds < 0:
+    if total_seconds <= 0:
         return "—"
     h = total_seconds // 3600
     m = (total_seconds % 3600) // 60
@@ -108,8 +108,8 @@ def index():
         cur.execute(
             """
             SELECT DISTINCT 
-                DATE_FORMAT(date_reported, '%%Y-%%m') as m_key,
-                DATE_FORMAT(date_reported, '%%M %%Y') as m_label
+                DATE_FORMAT(date_reported, '%Y-%m') as m_key,
+                DATE_FORMAT(date_reported, '%M %Y') as m_label
             FROM maintenance_requests
             WHERE (is_deleted IS NULL OR is_deleted=0)
             ORDER BY m_key DESC
@@ -256,8 +256,8 @@ def index():
         cur.execute(
             f"""
             SELECT 
-                DATE_FORMAT(mr.date_reported, '%%Y-%%m') AS m,
-                DATE_FORMAT(mr.date_reported, '%%M %%Y') AS month_label,
+                DATE_FORMAT(mr.date_reported, '%Y-%m') AS m,
+                DATE_FORMAT(mr.date_reported, '%M %Y') AS month_label,
                 COUNT(mr.id) AS total,
                 SUM(CASE WHEN mr.status = 'Resolved' THEN 1 ELSE 0 END) AS resolved,
                 SUM(CASE WHEN mr.status = 'In Progress' THEN 1 ELSE 0 END) AS in_progress,
@@ -268,7 +268,7 @@ def index():
             JOIN equipment e ON e.id = mr.equipment_id
             LEFT JOIN maintenance_logs ml ON mr.id = ml.request_id
             WHERE {where_clause}
-            GROUP BY DATE_FORMAT(mr.date_reported, '%%Y-%%m'), DATE_FORMAT(mr.date_reported, '%%M %%Y')
+            GROUP BY DATE_FORMAT(mr.date_reported, '%Y-%m'), DATE_FORMAT(mr.date_reported, '%M %Y')
             ORDER BY m DESC
             """,
             tuple(params),
@@ -307,7 +307,7 @@ def index():
             tuple(params),
         )
         avg_res_val = cur.fetchone()["avg_hours"]
-        avg_res = float(avg_res_val) if avg_res_val else 0.0
+        avg_res = float(avg_res_val) if avg_res_val is not None else None
 
         # 6. Most common issues by category
         cur.execute(
@@ -383,8 +383,7 @@ def index():
                 mr.date_reported,
                 ml.date_completed,
                 TIMESTAMPDIFF(SECOND, mr.date_reported, ml.date_completed) / 3600.0 AS duration_hours,
-                ml.action_taken,
-                ml.cost
+                ml.action_taken
             FROM maintenance_requests mr
             JOIN equipment e ON mr.equipment_id = e.id
             JOIN maintenance_logs ml ON mr.id = ml.request_id
@@ -547,8 +546,8 @@ def index():
                 cur.execute(
                     """
                     SELECT 
-                        DATE_FORMAT(mr.date_reported, '%%Y-%%m') AS m_key,
-                        DATE_FORMAT(mr.date_reported, '%%M %%Y') AS m_label,
+                        DATE_FORMAT(mr.date_reported, '%Y-%m') AS m_key,
+                        DATE_FORMAT(mr.date_reported, '%M %Y') AS m_label,
                         COUNT(DISTINCT mr.id) AS assigned_count,
                         COUNT(DISTINCT CASE WHEN mr.status = 'Resolved' THEN mr.id END) AS completed_count
                     FROM maintenance_requests mr
@@ -731,7 +730,7 @@ def index():
             resolution_rate=resolution_rate,
             avg_resp=round(avg_resp, 2),
             avg_resp_str=_format_duration(avg_resp),
-            avg_res=round(avg_res, 2),
+            avg_res=round(avg_res, 2) if avg_res is not None else None,
             avg_res_str=_format_duration(avg_res),
             peak_hour_str=peak_hour_str,
             common_issues=common_issues,

@@ -1,166 +1,256 @@
-# QR Code-Enabled Equipment Repair and Maintenance Management System
+# QR Code-Enabled Equipment Repair & Maintenance Management System
 
-A web-based maintenance management portal built with **Python Flask** and **MySQL**. It enables end-to-end tracking of school/facility equipment lifecycle, QR code scanning, maintenance request submissions, technician assignment, repair logs, and reporting.
-
----
-
-## Features
-
-- **Role-Based Access Control (RBAC):** Distinct dashboards and permissions for **Admin**, **Custodian**, **Technician**, and **Faculty**.
-- **QR Code Dispatch & Scanning:** Each piece of equipment has a unique QR code for quick scanning and instant maintenance reporting.
-- **Request Lifecycle Management:** Submit maintenance tickets with photos, set priority/urgency, assign technicians, track repair progress, and log resolutions.
-- **Maintenance Logbook:** Detailed audit trail of all repairs, cost tracking, and equipment histories.
-- **Analytics & Export:** Visual summaries, status breakdowns, and report exports.
-- **Auto-Bootstrapping Database:** Automatically creates tables and seeds default baseline accounts on first startup.
+A production-ready full-stack web application built with **Python (Flask)** and **MySQL / MariaDB**. The system provides end-to-end laboratory and facility management, QR code equipment scanning, repair ticketing workflows, technician activity tracking, logbook generation, and administrative reports.
 
 ---
 
-## Technology Stack
+## 🌟 Key Features
 
-- **Backend:** Python (Flask 3.x), MySQL Connector, Gunicorn / Waitress WSGI
-- **Database:** MySQL 8.0+ / MariaDB
-- **Frontend:** Jinja2 templates, CSS3, JavaScript
-- **Security:** Bcrypt password hashing, CSRF protection, secure sessions
+- **Role-Based Access Control (RBAC):** Distinct dashboards and access levels for **Admin**, **Custodian**, **Technician**, and **Faculty**.
+- **QR Code Asset Tracking:** Instant camera/scanner lookup of equipment details, health status, and historical maintenance logs.
+- **Maintenance Lifecycle:** Ticketing pipeline from submission, assignment, repair in-progress, completed verification, to resolution.
+- **Reporting & Auditing:** Executive KPIs, technician workload dossiers, CSV data exports, and audit logging.
+- **Production & Deployment Ready:**
+  - Multi-threaded WSGI production server support (**Waitress** for Windows, **Gunicorn** for Linux/Cloud).
+  - Containerized deployment with **Docker** and **Docker Compose**.
+  - Built-in `/health` monitoring endpoint for orchestrators and load balancers.
+  - Security hardening (CSRF protection, secure session cookies, `ProxyFix` reverse proxy support, and nosniff/XSS/SAMEORIGIN headers).
+  - Zero-effort automated database schema bootstrapping and indexing.
 
 ---
 
-## Quick Start (Local Development)
+## 📋 System Prerequisites
 
-### 1. Prerequisites
-- **Python 3.10+**: [python.org](https://www.python.org/)
-- **XAMPP** (or MySQL Server): [apachefriends.org](https://www.apachefriends.org/)
+1. **Python 3.10+** (Tested with Python 3.11, 3.12, and 3.14)
+2. **MySQL Community Server** or **MariaDB** (Included in XAMPP or standalone)
+3. *(Optional)* **Docker & Docker Compose** for containerized setup
 
-### 2. Setup
+---
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/diyeon21/qr-management-system-final.git
-   cd qr-management-system-final
+## 🚀 Quick Start (Development)
+
+### 1. Clone & Navigate to Project
+```powershell
+cd "c:\xampp\htdocs\Capstone Project\Capstone Project"
+```
+
+### 2. Configure Environment
+Copy `.env.example` to `.env`:
+```powershell
+copy .env.example .env
+```
+Ensure your MySQL database connection parameters in `.env` match your local database (e.g. `127.0.0.1:3306`, user `root`, empty password if using default XAMPP).
+
+### 3. Install Dependencies
+```powershell
+pip install -r requirements.txt
+```
+
+### 4. Initialize Database & Seed Users
+```powershell
+python init_db.py --seed
+```
+*(Or double-click `seed_db.bat` on Windows)*
+
+### 5. Launch Development Server
+```powershell
+python app.py
+```
+*(Or double-click `start.bat`)*
+
+Access the portal in your browser: **[http://localhost:5000](http://localhost:5000)**
+
+---
+
+## 🛡️ Production Deployment Options
+
+### Option A: Windows Production Server (Waitress WSGI)
+
+For production deployment on Windows Server or on-premise XAMPP workstations:
+
+1. Ensure MySQL is running (e.g., via XAMPP Control Panel or Windows Service).
+2. Configure `.env` with:
+   ```ini
+   FLASK_ENV=production
+   FLASK_DEBUG=0
+   SECRET_KEY=generate_a_strong_random_secret_here
+   PUBLIC_BASE_URL=http://your-server-ip:5000
    ```
-
-2. **Create and activate a virtual environment:**
-   ```bash
-   python -m venv .venv
-   # Windows:
-   .venv\Scripts\activate
-   # Linux/macOS:
-   source .venv/bin/activate
+3. Run the production launcher:
+   ```cmd
+   start_production.bat
    ```
+   *(Or run `start_production.ps1` via PowerShell)*
 
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Start MySQL in XAMPP** (Default port `3306`, user `root`, no password).
-
-5. **Run the development server:**
-   ```bash
-   python app.py
-   ```
-   *(Or double-click `start.bat` on Windows)*
-
-Open your browser at **`http://127.0.0.1:5000`**.
+This starts a multi-threaded **Waitress WSGI** server designed for production stability.
 
 ---
 
-## Production Deployment
+### Option B: Docker & Docker Compose (Recommended for Cloud/Containers)
 
-### Option A: Cloud Platforms (Render / Railway / Heroku)
-
-This repository is pre-configured with a [`Procfile`](file:///c:/xampp/htdocs/Capstone%20Project/Capstone%20Project/Procfile) and [`wsgi.py`](file:///c:/xampp/htdocs/Capstone%20Project/Capstone%20Project/wsgi.py) for automatic detection.
-
-1. Connect your GitHub repository to **Render** or **Railway**.
-2. Add a **MySQL database** service on the platform.
-3. Configure Environment Variables in the platform's settings dashboard:
-   - `SECRET_KEY`: Generate a long random secret key.
-   - `DATABASE_URL` or `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DB`.
-   - `FLASK_DEBUG`: Set to `0`.
-   - `PUBLIC_BASE_URL`: Your production app domain (e.g. `https://your-domain.onrender.com`).
-4. Build Command: `pip install -r requirements.txt`
-5. Start Command: `gunicorn wsgi:app --workers 3 --timeout 120`
-
----
-
-### Option B: Docker & Docker Compose (1-Command Deploy)
-
-Run the full stack (Flask app + MySQL 8.0 database) with one command:
+Deploy the entire stack (Flask app + MySQL 8.0 + persistent volumes) with a single command:
 
 ```bash
 docker compose up -d --build
 ```
 
-The application will start on port `5000` with automated database healthchecks and persistent storage.
+- Web Portal: **http://localhost:5000**
+- Health check: **http://localhost:5000/health**
+- Data persistence: MySQL data and uploaded attachments are persisted in Docker volumes (`mysql_data` and `app_uploads`).
+
+To seed the initial user accounts inside the container:
+```bash
+docker compose exec web python init_db.py --seed
+```
+
+To stop the containers:
+```bash
+docker compose down
+```
 
 ---
 
-### Option C: Windows Server (Waitress Production WSGI)
+### Option C: Linux / Cloud / VPS (Gunicorn + Nginx)
 
-For Windows hosting without development server warnings:
-
-1. Copy `.env.example` to `.env` and set production credentials:
-   ```powershell
-   copy .env.example .env
+1. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
    ```
-2. Double-click **`start_production.bat`** or run:
-   ```powershell
-   python -m waitress --listen=0.0.0.0:5000 wsgi:app
+2. **Initialize database:**
+   ```bash
+   python init_db.py --seed
+   ```
+3. **Configure Systemd service (`/etc/systemd/system/qr_maintenance.service`):**
+   ```ini
+   [Unit]
+   Description=QR Maintenance Management Portal
+   After=network.target mysql.service
+
+   [Service]
+   User=www-data
+   WorkingDirectory=/var/www/qr_maintenance
+   Environment="PATH=/var/www/qr_maintenance/.venv/bin"
+   ExecStart=/var/www/qr_maintenance/.venv/bin/gunicorn wsgi:application --bind 127.0.0.1:5000 --workers 4 --threads 2
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+4. **Nginx Reverse Proxy:**
+   Copy `nginx/qr_maintenance.conf` to `/etc/nginx/sites-available/qr_maintenance`, update your domain name and paths, then reload Nginx:
+   ```bash
+   sudo systemctl reload nginx
    ```
 
 ---
 
-## Environment Variables Reference
+### Option D: Platform-as-a-Service (Render, Railway, Heroku)
 
-See [`.env.example`](file:///c:/xampp/htdocs/Capstone%20Project/Capstone%20Project/.env.example) for the full list:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SECRET_KEY` | Session encryption secret key | *Development default* |
-| `FLASK_DEBUG` | `1` for debug mode, `0` for production | `0` |
-| `PORT` | Port for the HTTP server | `5000` |
-| `MYSQL_HOST` | MySQL database host | `127.0.0.1` |
-| `MYSQL_PORT` | MySQL database port | `3306` |
-| `MYSQL_USER` | MySQL database username | `root` |
-| `MYSQL_PASSWORD` | MySQL database password | *(empty)* |
-| `MYSQL_DB` | Database schema name | `qr_maintenance_db` |
-| `DATABASE_URL` | Complete MySQL connection URI (overrides individual vars) | *None* |
-| `PUBLIC_BASE_URL` | Base URL embedded in generated QR codes | *None* |
+The repository includes a ready-to-use `Procfile`:
+```
+web: gunicorn wsgi:application --bind 0.0.0.0:$PORT --workers 4 --threads 2 --timeout 120
+release: python init_db.py --seed
+```
+Attach a managed MySQL database plugin and set the matching `MYSQL_HOST`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DB`, and `SECRET_KEY` in the service environment settings.
 
 ---
 
-## Default Login Credentials
+## 🔑 Default Accounts
 
-Upon first startup, the database automatically initializes with these baseline accounts:
+Default accounts seeded by `init_db.py --seed`:
 
-| Role | Email | Password |
-|------|-------|----------|
-| **Admin** | `admin@school.edu` | `admin123` |
-| **Custodian** | `custodian@school.edu` | `custodian123` |
-| **Technician** | `technician@school.edu` | `technician123` |
-| **Faculty** | `faculty@school.edu` | `faculty123` |
+| Role | Email | Password | Primary Permissions |
+|------|-------|----------|---------------------|
+| **Administrator** | `admin@school.edu` | `admin123` | Full system control, reports, user management, audit logs |
+| **Custodian** | `custodian@school.edu` | `custodian123` | Equipment inventory, QR code generation, room assignments |
+| **Technician** | `technician@school.edu` | `technician123` | Repair tickets, diagnostic notes, repair duration logging |
+| **Faculty** | `faculty@school.edu` | `faculty123` | Issue reporting, QR scan view, my requests tracking |
 
-> **Security Note:** Change default passwords immediately after deploying to a public environment.
+> **Security Note:** In production environments, change all default passwords immediately after initial login.
 
 ---
 
-## Project Structure
+## ⚙️ Environment Variables Reference
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FLASK_ENV` | `production` | Application mode (`production` or `development`) |
+| `FLASK_DEBUG` | `0` | Debugger toggle (`0` = disabled, `1` = enabled) |
+| `SECRET_KEY` | *(built-in fallback)* | Secret key for signed session cookies and CSRF tokens |
+| `MYSQL_HOST` | `127.0.0.1` | MySQL server hostname or IP address |
+| `MYSQL_PORT` | `3306` | MySQL port |
+| `MYSQL_USER` | `root` | Database user |
+| `MYSQL_PASSWORD` | *(empty)* | Database password |
+| `MYSQL_DB` | `qr_maintenance_db` | Name of database |
+| `MYSQL_POOL_SIZE` | `10` | Database connection pool size (1–32) |
+| `HOST` | `0.0.0.0` | IP interface to bind server to |
+| `PORT` | `5000` | HTTP port to listen on |
+| `PUBLIC_BASE_URL` | `http://localhost:5000` | Public URL encoded in generated QR codes |
+| `BEHIND_PROXY` | `0` | Enable when behind Nginx, Apache, or Cloudflare for ProxyFix |
+| `PROXY_FIX_NUM_PROXIES` | `1` | Number of reverse proxy hops |
+| `SESSION_COOKIE_SECURE` | `0` | Set to `1` when HTTPS/SSL is active |
+| `MAX_CONTENT_LENGTH` | `8388608` | Maximum file upload size in bytes (8 MB) |
+
+---
+
+## 🩺 Health Check & Monitoring
+
+Send an HTTP GET request to `/health`:
+
+```bash
+curl http://localhost:5000/health
+```
+
+**Healthy Response (`200 OK`):**
+```json
+{
+  "status": "healthy",
+  "database": "connected",
+  "environment": "production",
+  "version": "1.0.0"
+}
+```
+
+If the database becomes unreachable, `/health` returns `503 Service Unavailable` with error details, alerting monitoring agents or automated container restarts.
+
+---
+
+## 🧪 Running Automated Tests
+
+Run the full test suite using `pytest`:
+
+```powershell
+python -m pytest -v
+```
+*(Or double-click `run_tests.bat` on Windows)*
+
+---
+
+## 📦 Project Structure
 
 ```text
-├── app.py                  # Main Flask application
-├── wsgi.py                 # Production WSGI entry point
-├── config.py               # Dynamic environment and DB config
-├── requirements.txt        # Production dependencies (gunicorn, waitress, etc.)
-├── Procfile                # Cloud PaaS deployment file (Render, Railway)
-├── Dockerfile              # Docker container configuration
-├── docker-compose.yml      # Multi-container orchestration (App + MySQL)
-├── .dockerignore           # Excludes local environments from Docker build
-├── .env.example            # Environment variables template
-├── start.bat               # Windows local development script
-├── start_production.bat    # Windows Waitress production script
-├── seed_mysql.py           # Manual baseline accounts seeder
-├── models/                 # Database connection pool and schema
-├── routes/                 # Blueprint controllers
-├── static/                 # CSS, JS, branding assets
-├── templates/              # Jinja2 dashboard templates
-└── uploads/                # User uploaded equipment ticket photos
+Capstone Project/
+├── app.py                     # Flask application factory, error handlers, & routes
+├── config.py                  # Production configuration loader & environment parsing
+├── wsgi.py                    # WSGI entrypoint for Waitress / Gunicorn
+├── init_db.py                 # CLI database schema bootstrap & seeding utility
+├── seed_mysql.py              # Default user credentials & initial data seeder
+├── requirements.txt           # Python application dependencies
+├── Dockerfile                 # Container image specification
+├── docker-compose.yml         # Multi-container orchestration (App + MySQL)
+├── .env.example               # Template environment configuration
+├── .gitignore                 # Version control exclusions
+├── Procfile                   # Cloud PaaS execution rules
+├── start.bat                  # Development server launcher
+├── start_production.bat       # Windows production server launcher (Waitress)
+├── start_production.ps1       # PowerShell production launcher
+├── run_tests.bat              # Test suite runner
+├── seed_db.bat                # Database seeder launcher
+├── models/                    # Database models, connection pool, security helpers
+├── routes/                    # Blueprint routes (auth, equipment, requests, reports, etc.)
+├── static/                    # CSS stylesheets, JavaScript files, images
+├── templates/                 # Jinja2 HTML templates
+├── tests/                     # Automated unit and integration test suite
+├── uploads/                   # Uploaded equipment photos and documentation
+├── nginx/                     # Nginx reverse proxy configuration template
+└── apache/                    # Apache / XAMPP VirtualHost proxy configuration
 ```

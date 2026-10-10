@@ -2,7 +2,7 @@ import html
 import os
 import time
 from datetime import timedelta
-from flask import Flask, session, request, render_template, send_from_directory
+from flask import Flask, session, request, render_template, send_from_directory, redirect, url_for, jsonify
 import config
 from routes import (
     auth_bp,
@@ -28,6 +28,21 @@ app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)
 app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = config.SESSION_COOKIE_SECURE
+
+# Ensure uploads directory exists on application start
+os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+
+# Support reverse proxy headers (Nginx, Apache, Cloudflare, AWS ALB)
+if config.BEHIND_PROXY:
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    app.wsgi_app = ProxyFix(
+        app.wsgi_app,
+        x_for=config.PROXY_FIX_NUM_PROXIES,
+        x_proto=config.PROXY_FIX_NUM_PROXIES,
+        x_host=config.PROXY_FIX_NUM_PROXIES,
+        x_prefix=config.PROXY_FIX_NUM_PROXIES,
+    )
 
 # Register Blueprints
 app.register_blueprint(auth_bp)
@@ -46,12 +61,45 @@ app.register_blueprint(import_bp)
 
 
 @app.after_request
-def set_security_headers(response):
+def apply_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if response.content_type and "text/html" in response.content_type:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     return response
+
+
+@app.route("/health")
+def health_check():
+    """Production health check endpoint for monitoring, load balancers, and Docker."""
+    db_status = "unknown"
+    try:
+        from models import get_db
+        db = get_db()
+        cur = db.cursor()
+        cur.execute("SELECT 1")
+        cur.fetchone()
+        cur.close()
+        db.close()
+        db_status = "connected"
+    except Exception as e:
+        return jsonify({
+            "status": "unhealthy",
+            "database": f"error: {str(e)}",
+            "version": "1.0.0",
+        }), 503
+
+    return jsonify({
+        "status": "healthy",
+        "database": db_status,
+        "environment": config.ENV,
+        "version": "1.0.0",
+    }), 200
+
 
 
 @app.route("/uploads/<path:filename>")
@@ -91,14 +139,6 @@ def inject_global():
         "status_badge": status_badge,
     }
 
-
-@app.after_request
-def set_security_headers(response):
-    if response.content_type and "text/html" in response.content_type:
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
-        response.headers["Pragma"] = "no-cache"
-        response.headers["Expires"] = "0"
-    return response
 
 
 @app.errorhandler(400)
@@ -153,6 +193,5 @@ def internal_server_error(e):
 
 
 if __name__ == "__main__":
-    os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=config.FLASK_DEBUG)
+    app.run(host=config.HOST, debug=config.DEBUG, port=config.PORT)
+

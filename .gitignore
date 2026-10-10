@@ -1,17 +1,35 @@
-vendor/
-uploads/*
-!uploads/.gitkeep
-
-# Python virtual environment
-.venv/
-venv/
-ENV/
-
-# Python bytecode & cache
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-.pytest_cache/
 
-# Environment variables & secrets
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment secrets and credentials
 .env
+.env.local
+.env.*.local
+*.key
+*.pem
+
+# Testing and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Uploaded media (keep folder structure)
+uploads/*
+!uploads/.gitkeep
+
+# OS and IDE caches
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Vendor / Composer
+vendor/

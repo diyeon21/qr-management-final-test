@@ -36,7 +36,7 @@ def _load_equipment(cur, eq_oid):
 
 
 @equipment_bp.route("/", methods=["GET", "POST"])
-@role_required("admin", "custodian")
+@role_required("custodian", "technician", "admin")
 @csrf_protect
 def index():
     db = get_db()
@@ -67,7 +67,7 @@ def index():
                 action_desc = f"Updated equipment id {existing_id} ({name})"
             else:
                 cur.execute(
-                    "INSERT INTO equipment (name, category, location, purchase_cost, maintenance_cost, status, qr_code, created_at) VALUES (%s, %s, %s, 0, 0, %s, %s, %s)",
+                    "INSERT INTO equipment (name, category, location, status, qr_code, created_at) VALUES (%s, %s, %s, %s, %s, %s)",
                     (name, category, location, status, "", now_utc().replace(tzinfo=None)),
                 )
                 eq_id_hex = str(cur.lastrowid)
@@ -120,7 +120,7 @@ def index():
 
 @equipment_bp.route("/delete/<int:equipment_id>", methods=["POST"], endpoint="delete")
 @equipment_bp.route("/delete_equipment/<int:equipment_id>", methods=["POST"], endpoint="delete_equipment")
-@role_required("admin", "custodian")
+@role_required("custodian", "technician", "admin")
 @csrf_protect
 def delete_equipment(equipment_id):
     db = get_db()

@@ -2,12 +2,16 @@
 .gitignore
 .venv
 venv
-ENV
 __pycache__
 *.py[cod]
 *$py.class
 .pytest_cache
 tests
 .env
+.env.*
 uploads/*
 !uploads/.gitkeep
+docker-compose*.yml
+README.md
+*.bat
+*.ps1

@@ -28,10 +28,11 @@ def _safe_next(target):
 @auth_bp.route("/", methods=["GET", "POST"])
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "GET" and "user" in session and request.args.get("next"):
+    if "user" in session:
         nxt = _safe_next(request.args.get("next"))
         if nxt:
             return redirect(nxt)
+        return redirect(url_for(f"dashboard.{session['user']['role']}"))
 
     error = ""
     next_url = _safe_next(request.args.get("next") or request.form.get("next"))

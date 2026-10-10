@@ -72,12 +72,10 @@
 
             <!-- ASSET INVENTORY -->
             <div class="nav-section-label">Assets &amp; QR</div>
-            {% if user.role in ['admin', 'custodian'] %}
             <a href="{{ url_for('equipment.index') }}" class="nav-item {{ 'active' if request.endpoint == 'equipment.index' else '' }}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
                 <span>Equipment Inventory</span>
             </a>
-            {% endif %}
             <a href="{{ url_for('scan.camera') }}" class="nav-item {{ 'active' if request.endpoint == 'scan.camera' else '' }}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3z"/><path d="M20 14v3h-3"/><path d="M14 20h7"/></svg>
                 <span>Scan QR Code</span>

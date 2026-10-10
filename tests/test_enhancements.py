@@ -85,6 +85,8 @@ class TestStatusBadgesAndDurationFormatting(unittest.TestCase):
         self.assertEqual(status_badge("Not Working"), "badge-danger")
         self.assertEqual(status_badge("Damaged"), "badge-danger")
         self.assertEqual(status_badge("In Progress"), "badge-warning")
+        self.assertEqual(status_badge("Completed - Pending Verification"), "badge-info")
+        self.assertEqual(status_badge("Pending Verification"), "badge-info")
         self.assertEqual(status_badge("Resolved"), "badge-success")
         self.assertEqual(status_badge("Pending"), "badge-warning")
 
@@ -115,6 +117,11 @@ class TestDatabaseSchemaAndQueries(unittest.TestCase):
         self.cur.execute("SHOW COLUMNS FROM maintenance_requests LIKE 'repair_start'")
         row = self.cur.fetchone()
         self.assertIsNotNone(row, "repair_start column must exist on maintenance_requests")
+
+    def test_maintenance_requests_technician_notes_column(self):
+        self.cur.execute("SHOW COLUMNS FROM maintenance_requests LIKE 'technician_notes'")
+        row = self.cur.fetchone()
+        self.assertIsNotNone(row, "technician_notes column must exist on maintenance_requests")
 
     def test_maintenance_logs_enhancement_columns(self):
         self.cur.execute("SHOW COLUMNS FROM maintenance_logs LIKE 'repair_start'")

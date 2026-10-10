@@ -13,34 +13,44 @@ _initialized = False
 def get_db():
     global _pool, _initialized
     if _pool is None:
+        conn_kwargs = {
+            "host": config.MYSQL_HOST,
+            "port": config.MYSQL_PORT,
+            "user": config.MYSQL_USER,
+            "password": config.MYSQL_PASSWORD,
+            "ssl_disabled": getattr(config, "MYSQL_SSL_DISABLED", True),
+        }
+        if getattr(config, "MYSQL_SSL_CA", ""):
+            conn_kwargs["ssl_ca"] = config.MYSQL_SSL_CA
+
+
         try:
-            bootstrap = mysql.connector.connect(
-                host=config.MYSQL_HOST,
-                port=config.MYSQL_PORT,
-                user=config.MYSQL_USER,
-                password=config.MYSQL_PASSWORD,
-            )
+            bootstrap = mysql.connector.connect(**conn_kwargs)
             bcur = bootstrap.cursor()
             bcur.execute(f"CREATE DATABASE IF NOT EXISTS `{config.MYSQL_DB}`")
             bootstrap.commit()
             bcur.close()
             bootstrap.close()
         except Exception:
-            # Cloud hosts (e.g. Railway, Render, Supabase) may restrict CREATE DATABASE or the db already exists
+            # In managed cloud databases (e.g. TiDB, RDS, Clever Cloud), user may not have CREATE DATABASE permissions
             pass
 
+        pool_size = max(1, min(32, getattr(config, "MYSQL_POOL_SIZE", 8)))
         _pool = pooling.MySQLConnectionPool(
             pool_name="webbased_pool",
-            pool_size=8,
-            host=config.MYSQL_HOST,
-            port=config.MYSQL_PORT,
-            user=config.MYSQL_USER,
-            password=config.MYSQL_PASSWORD,
+            pool_size=pool_size,
             database=config.MYSQL_DB,
             autocommit=False,
+            **conn_kwargs,
         )
 
+
     cnx = _pool.get_connection()
+    try:
+        cnx.ping(reconnect=True, attempts=3, delay=1)
+    except Exception:
+        pass
+
     if not _initialized:
         cur = cnx.cursor()
         cur.execute("""
@@ -63,8 +73,6 @@ def get_db():
                 name              VARCHAR(255) NOT NULL,
                 category          VARCHAR(255),
                 location          VARCHAR(255),
-                purchase_cost     DECIMAL(12,2) DEFAULT 0,
-                maintenance_cost  DECIMAL(12,2) DEFAULT 0,
                 status            VARCHAR(64) DEFAULT 'Working',
                 qr_code           TEXT,
                 created_at        DATETIME NOT NULL
@@ -94,17 +102,16 @@ def get_db():
             cur.execute("ALTER TABLE maintenance_requests ADD CONSTRAINT fk_technician FOREIGN KEY (technician_id) REFERENCES users(id) ON DELETE SET NULL")
         except Exception:
             pass  # Constraint may already exist
-        cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0")
         cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL")
         cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS affected_component VARCHAR(100) NULL")
         cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS repair_start DATETIME NULL")
+        cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS technician_notes TEXT NULL")
 
         cur.execute("""
             CREATE TABLE IF NOT EXISTS maintenance_logs (
                 id              INT AUTO_INCREMENT PRIMARY KEY,
                 equipment_id    INT NOT NULL,
                 request_id      INT NOT NULL,
-                cost            DECIMAL(12,2) DEFAULT 0,
                 action_taken    TEXT,
                 date_completed  DATETIME NOT NULL,
                 FOREIGN KEY (equipment_id) REFERENCES equipment(id),
@@ -160,27 +167,6 @@ def get_db():
                 cur.execute(idx_sql)
             except Exception:
                 pass
-
-        # Ensure default system accounts exist if users table is empty
-        try:
-            cur.execute("SELECT COUNT(*) FROM users")
-            if cur.fetchone()[0] == 0:
-                import bcrypt
-                default_users = [
-                    ("Administrator", "admin@school.edu", "admin", "admin123"),
-                    ("Custodian", "custodian@school.edu", "custodian", "custodian123"),
-                    ("Technician", "technician@school.edu", "technician", "technician123"),
-                    ("Faculty", "faculty@school.edu", "faculty", "faculty123"),
-                ]
-                now_str = datetime.now(timezone.utc).replace(tzinfo=None)
-                for uname, uemail, urole, upass in default_users:
-                    hpass = bcrypt.hashpw(upass.encode(), bcrypt.gensalt()).decode()
-                    cur.execute(
-                        "INSERT INTO users (name, email, password, role, created_at) VALUES (%s, %s, %s, %s, %s)",
-                        (uname, uemail, hpass, urole, now_str),
-                    )
-        except Exception:
-            pass
 
         cnx.commit()
         cur.close()
@@ -254,6 +240,8 @@ def status_badge(status: str) -> str:
         "Under Maintenance": "badge-warning",
         "In Progress": "badge-warning",
         "Pending": "badge-warning",
+        "Completed - Pending Verification": "badge-info",
+        "Pending Verification": "badge-info",
         "Not Working": "badge-danger",
         "Damaged": "badge-danger",
         "Rejected": "badge-danger",

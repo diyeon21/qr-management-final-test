@@ -5,7 +5,13 @@ from models.security import csrf_protect
 
 requests_bp = Blueprint("requests", __name__, url_prefix="/maintenance_requests")
 
-ALLOWED_REQUEST_STATUSES = {"Pending", "In Progress", "Resolved", "Rejected"}
+ALLOWED_REQUEST_STATUSES = {
+    "Pending",
+    "In Progress",
+    "Completed - Pending Verification",
+    "Resolved",
+    "Rejected",
+}
 
 
 @requests_bp.route("/assign/<int:request_id>", methods=["POST"])
@@ -72,61 +78,116 @@ def index():
             if status not in ALLOWED_REQUEST_STATUSES:
                 status = "Pending"
 
-            # Validate action_taken is required when resolving
-            if status == "Resolved":
+            logged_user = session.get("user", {})
+            user_role = logged_user.get("role")
+
+            # Technicians cannot mark Resolved directly; their completion step is 'Completed - Pending Verification'
+            if user_role == "technician" and status in ("Resolved", "Completed - Pending Verification"):
                 action = (request.form.get("action_taken") or "").strip()
                 if not action:
                     cur.close()
                     return redirect(url_for("requests.index", error="action_required"))
+                status = "Completed - Pending Verification"
+
+            # Validate action_taken is required when resolving
+            if status == "Resolved":
+                action = (request.form.get("action_taken") or "").strip()
+                if not action:
+                    cur.execute("SELECT technician_notes FROM maintenance_requests WHERE id=%s", (req_oid,))
+                    prev_note_row = cur.fetchone()
+                    action = (prev_note_row.get("technician_notes") or "").strip() if prev_note_row else ""
+                if not action:
+                    cur.close()
+                    return redirect(url_for("requests.index", error="action_required"))
+            else:
+                action = (request.form.get("action_taken") or "").strip()
 
             now_time = now_utc().replace(tzinfo=None)
 
+            # Retrieve request and equipment details
+            cur.execute(
+                "SELECT r.*, e.name AS equipment_name, u.name AS reporter_name "
+                "FROM maintenance_requests r "
+                "JOIN equipment e ON r.equipment_id = e.id "
+                "LEFT JOIN users u ON r.reported_by = u.id "
+                "WHERE r.id=%s",
+                (req_oid,)
+            )
+            req_doc = cur.fetchone() or {}
+            prev_status = req_doc.get("status")
+            equipment_name = req_doc.get("equipment_name") or "Equipment"
+            reported_by = req_doc.get("reported_by")
+            tech_id = req_doc.get("technician_id")
+
             # If user is technician and request unassigned, assign to self
-            logged_user = session.get("user", {})
-            if logged_user.get("role") == "technician" and status in ("In Progress", "Resolved"):
+            if user_role == "technician" and status in ("In Progress", "Completed - Pending Verification"):
                 cur.execute("UPDATE maintenance_requests SET technician_id = COALESCE(technician_id, %s) WHERE id=%s", (logged_user.get("id"), req_oid))
+                tech_id = tech_id or logged_user.get("id")
+
+            # If admin also selected technician in this form
+            if user_role == "admin" and "technician_id" in request.form:
+                tech_val = (request.form.get("technician_id") or "").strip()
+                new_tech_id = oid(tech_val) if tech_val else None
+                cur.execute("UPDATE maintenance_requests SET technician_id=%s WHERE id=%s", (new_tech_id, req_oid))
+                if new_tech_id and new_tech_id != tech_id:
+                    tech_id = new_tech_id
+                    from models.db import create_notification
+                    create_notification(
+                        db,
+                        new_tech_id,
+                        f"You have been assigned to repair equipment '{equipment_name}'",
+                        url_for("requests.index")
+                    )
 
             if status == "In Progress":
                 cur.execute(
                     "UPDATE maintenance_requests SET status=%s, date_responded=%s, repair_start=COALESCE(repair_start, %s) WHERE id=%s",
                     (status, now_time, now_time, req_oid),
                 )
-            else:
+                eq_id = req_doc.get("equipment_id")
+                if eq_id:
+                    cur.execute("UPDATE equipment SET status='Under Repair' WHERE id=%s", (eq_id,))
+
+                # If Admin returned it for rework from Completed - Pending Verification
+                if user_role == "admin" and prev_status == "Completed - Pending Verification" and tech_id:
+                    from models.db import create_notification
+                    revision_msg = f"Admin requested rework on '{equipment_name}'."
+                    if action:
+                        revision_msg += f" Note: {action}"
+                    create_notification(db, tech_id, revision_msg, url_for("requests.index"))
+
+            elif status == "Completed - Pending Verification":
+                cur.execute(
+                    "UPDATE maintenance_requests SET status=%s, technician_notes=%s, date_responded=%s WHERE id=%s",
+                    (status, action, now_time, req_oid),
+                )
+                from models.db import create_notification
+                # Notify all Admins that repair is completed and awaits verification
+                cur.execute("SELECT id FROM users WHERE role='admin' AND (is_deleted IS NULL OR is_deleted=0)")
+                admin_rows = cur.fetchall()
+                tech_display = logged_user.get("name") or "Technician"
+                for adm in admin_rows:
+                    create_notification(
+                        db,
+                        adm["id"],
+                        f"Technician {tech_display} completed repair on '{equipment_name}'. Awaiting your verification.",
+                        url_for("requests.index")
+                    )
+                # Inform reporting faculty member that repair is completed and under verification
+                if reported_by:
+                    create_notification(
+                        db,
+                        reported_by,
+                        f"Repair on '{equipment_name}' has been completed by technician and is currently awaiting Admin verification.",
+                        url_for("my_req.index")
+                    )
+
+            elif status == "Resolved":
                 cur.execute(
                     "UPDATE maintenance_requests SET status=%s, date_responded=%s WHERE id=%s",
                     (status, now_time, req_oid),
                 )
-
-            # If admin also selected technician in this form
-            if logged_user.get("role") == "admin" and "technician_id" in request.form:
-                tech_val = (request.form.get("technician_id") or "").strip()
-                new_tech_id = oid(tech_val) if tech_val else None
-                cur.execute("UPDATE maintenance_requests SET technician_id=%s WHERE id=%s", (new_tech_id, req_oid))
-                if new_tech_id:
-                    cur.execute(
-                        "SELECT r.id, e.name AS equipment_name, u.name AS tech_name FROM maintenance_requests r "
-                        "JOIN equipment e ON r.equipment_id = e.id "
-                        "JOIN users u ON u.id = %s WHERE r.id = %s",
-                        (new_tech_id, req_oid)
-                    )
-                    tinfo = cur.fetchone()
-                    if tinfo:
-                        from models.db import create_notification
-                        create_notification(
-                            db,
-                            new_tech_id,
-                            f"You have been assigned to repair equipment '{tinfo['equipment_name']}'",
-                            url_for("requests.index")
-                        )
-
-            if status == "Resolved":
-                cur.execute(
-                    "SELECT equipment_id, technician_id, repair_start, date_reported FROM maintenance_requests WHERE id=%s",
-                    (req_oid,)
-                )
-                req_doc = cur.fetchone() or {}
                 eq_id = req_doc.get("equipment_id")
-                tech_id = req_doc.get("technician_id")
                 start_time = req_doc.get("repair_start") or req_doc.get("date_reported") or now_time
 
                 # Calculate duration in minutes
@@ -136,43 +197,58 @@ def index():
                 except Exception:
                     duration_minutes = 0
 
+                final_action = action or req_doc.get("technician_notes") or "Repair completed and verified."
                 if eq_id:
                     cur.execute(
-                        "INSERT INTO maintenance_logs (equipment_id, request_id, cost, action_taken, date_completed, repair_start, duration_minutes, technician_id) "
-                        "VALUES (%s, %s, 0, %s, %s, %s, %s, %s)",
-                        (eq_id, req_oid, action, now_time, start_time, duration_minutes, tech_id),
+                        "INSERT INTO maintenance_logs (equipment_id, request_id, action_taken, date_completed, repair_start, duration_minutes, technician_id) "
+                        "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                        (eq_id, req_oid, final_action, now_time, start_time, duration_minutes, tech_id),
                     )
                     cur.execute(
                         "UPDATE equipment SET status='Working' WHERE id=%s",
                         (eq_id,),
                     )
-            elif status == "In Progress":
-                eq_id = oid(request.form.get("equipment_id"))
-                if not eq_id:
-                    cur.execute("SELECT equipment_id FROM maintenance_requests WHERE id=%s", (req_oid,))
-                    r_row = cur.fetchone()
-                    eq_id = r_row.get("equipment_id") if r_row else None
-                if eq_id:
-                    cur.execute("UPDATE equipment SET status='Under Repair' WHERE id=%s", (eq_id,))
 
-            # Notify reporting faculty member
-            cur.execute(
-                "SELECT r.reported_by, e.name AS equipment_name FROM maintenance_requests r JOIN equipment e ON r.equipment_id = e.id WHERE r.id=%s",
-                (req_oid,)
-            )
-            req_info = cur.fetchone()
-            if req_info:
                 from models.db import create_notification
-                create_notification(
-                    db,
-                    req_info["reported_by"],
-                    f"Your request for '{req_info['equipment_name']}' was updated to '{status}'",
-                    url_for("my_req.index")
+                # Notify reporting faculty member that repair was verified and resolved by Admin
+                if reported_by:
+                    create_notification(
+                        db,
+                        reported_by,
+                        f"Your request for '{equipment_name}' was verified and resolved by Admin. Equipment is now working.",
+                        url_for("my_req.index")
+                    )
+                # Notify assigned technician that repair was approved
+                if tech_id and tech_id != logged_user.get("id"):
+                    create_notification(
+                        db,
+                        tech_id,
+                        f"Admin has verified and approved your repair for '{equipment_name}'.",
+                        url_for("requests.index")
+                    )
+
+            elif status == "Rejected":
+                cur.execute(
+                    "UPDATE maintenance_requests SET status=%s, date_responded=%s WHERE id=%s",
+                    (status, now_time, req_oid),
+                )
+                if reported_by:
+                    from models.db import create_notification
+                    create_notification(
+                        db,
+                        reported_by,
+                        f"Your request for '{equipment_name}' was rejected: {action or 'No reason provided.'}",
+                        url_for("my_req.index")
+                    )
+            else:
+                cur.execute(
+                    "UPDATE maintenance_requests SET status=%s, date_responded=%s WHERE id=%s",
+                    (status, now_time, req_oid),
                 )
 
             db.commit()
             try:
-                log_activity(db, session.get("user", {}).get("id"), "update_request", f"Updated maintenance request id {req_oid} to '{status}'", "maintenance_request", req_oid)
+                log_activity(db, logged_user.get("id"), "update_request", f"Updated maintenance request id {req_oid} to '{status}'", "maintenance_request", req_oid)
             except Exception:
                 pass
 
@@ -188,7 +264,7 @@ def index():
             "LEFT JOIN users tech ON r.technician_id = tech.id "
             "LEFT JOIN maintenance_logs ml ON r.id = ml.request_id "
             "WHERE r.status NOT IN ('Resolved', 'Rejected') AND ml.id IS NULL AND (r.is_deleted IS NULL OR r.is_deleted=0) "
-            "ORDER BY r.id DESC"
+            "ORDER BY (CASE WHEN r.status = 'Completed - Pending Verification' THEN 0 WHEN r.status = 'In Progress' THEN 1 ELSE 2 END), r.id DESC"
         )
         rows = cur.fetchall()
 

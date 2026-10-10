@@ -25,7 +25,7 @@ def equipment_import():
 
         stream = io.StringIO(file.stream.read().decode('utf-8'))
         reader = csv.DictReader(stream)
-        required_fields = {'name', 'category', 'location', 'purchase_cost', 'maintenance_cost', 'status', 'qr_code'}
+        required_fields = {'name', 'category', 'location', 'status', 'qr_code'}
         missing = required_fields - set(reader.fieldnames or [])
         if missing:
             flash(f'Missing required columns: {", ".join(missing)}', 'error')
@@ -40,14 +40,12 @@ def equipment_import():
                 continue
             category = normalize_text(row.get('category'))
             location = normalize_text(row.get('location'))
-            purchase_cost = float(row.get('purchase_cost') or 0)
-            maintenance_cost = float(row.get('maintenance_cost') or 0)
             status = normalize_text(row.get('status')) or 'Working'
             qr_code = normalize_text(row.get('qr_code'))
             cur.execute(
-                "INSERT INTO equipment (name, category, location, purchase_cost, maintenance_cost, status, qr_code, created_at) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-                (name, category, location, purchase_cost, maintenance_cost, status, qr_code, now_utc().replace(tzinfo=None))
+                "INSERT INTO equipment (name, category, location, status, qr_code, created_at) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (name, category, location, status, qr_code, now_utc().replace(tzinfo=None))
             )
             inserted += 1
         db.commit()

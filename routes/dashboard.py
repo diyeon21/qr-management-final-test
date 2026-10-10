@@ -38,9 +38,9 @@ def admin():
         damaged_top = cur.fetchall()
 
         cur.execute(
-            "SELECT DATE_FORMAT(date_reported, '%%Y-%%m') AS _id, COUNT(*) AS total "
+            "SELECT DATE_FORMAT(date_reported, '%Y-%m') AS _id, COUNT(*) AS total "
             "FROM maintenance_requests WHERE (is_deleted IS NULL OR is_deleted=0) "
-            "GROUP BY DATE_FORMAT(date_reported, '%%Y-%%m') ORDER BY _id ASC LIMIT 12"
+            "GROUP BY DATE_FORMAT(date_reported, '%Y-%m') ORDER BY _id ASC LIMIT 12"
         )
         monthly = cur.fetchall()
 
@@ -113,10 +113,10 @@ def admin():
                 u.id AS technician_id,
                 u.name AS technician_name,
                 u.email AS technician_email,
-                COUNT(DISTINCT CASE WHEN DATE_FORMAT(mr.date_reported, '%%Y-%%m') = %s THEN mr.id END) AS month_assigned,
-                COUNT(DISTINCT CASE WHEN DATE_FORMAT(ml.date_completed, '%%Y-%%m') = %s THEN ml.id END) AS month_completed,
+                COUNT(DISTINCT CASE WHEN DATE_FORMAT(mr.date_reported, '%Y-%m') = %s THEN mr.id END) AS month_assigned,
+                COUNT(DISTINCT CASE WHEN DATE_FORMAT(ml.date_completed, '%Y-%m') = %s THEN ml.id END) AS month_completed,
                 COUNT(DISTINCT CASE WHEN mr.status = 'In Progress' THEN mr.id END) AS active_in_progress,
-                AVG(CASE WHEN DATE_FORMAT(ml.date_completed, '%%Y-%%m') = %s AND ml.duration_minutes IS NOT NULL THEN ml.duration_minutes END) AS avg_duration_mins
+                AVG(CASE WHEN DATE_FORMAT(ml.date_completed, '%Y-%m') = %s AND ml.duration_minutes IS NOT NULL THEN ml.duration_minutes END) AS avg_duration_mins
             FROM users u
             LEFT JOIN maintenance_requests mr ON mr.technician_id = u.id AND (mr.is_deleted IS NULL OR mr.is_deleted = 0)
             LEFT JOIN maintenance_logs ml ON ml.technician_id = u.id
