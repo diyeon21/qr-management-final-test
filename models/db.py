@@ -93,16 +93,22 @@ def get_db():
                 affected_component  VARCHAR(100) NULL,
                 date_reported       DATETIME NOT NULL,
                 date_responded      DATETIME,
+                is_deleted          TINYINT(1) NOT NULL DEFAULT 0,
+                deleted_at          DATETIME NULL,
+                technician_id       INT NULL,
+                repair_start        DATETIME NULL,
+                technician_notes    TEXT NULL,
                 FOREIGN KEY (equipment_id) REFERENCES equipment(id),
                 FOREIGN KEY (reported_by)  REFERENCES users(id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         """)
+        cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0")
+        cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL")
         cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS technician_id INT NULL")
         try:
             cur.execute("ALTER TABLE maintenance_requests ADD CONSTRAINT fk_technician FOREIGN KEY (technician_id) REFERENCES users(id) ON DELETE SET NULL")
         except Exception:
             pass  # Constraint may already exist
-        cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL")
         cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS affected_component VARCHAR(100) NULL")
         cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS repair_start DATETIME NULL")
         cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS technician_notes TEXT NULL")
@@ -114,6 +120,9 @@ def get_db():
                 request_id      INT NOT NULL,
                 action_taken    TEXT,
                 date_completed  DATETIME NOT NULL,
+                repair_start    DATETIME NULL,
+                duration_minutes INT NULL,
+                technician_id   INT NULL,
                 FOREIGN KEY (equipment_id) REFERENCES equipment(id),
                 FOREIGN KEY (request_id)   REFERENCES maintenance_requests(id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4

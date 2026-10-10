@@ -182,6 +182,7 @@ def not_found_error(e):
 
 @app.errorhandler(500)
 def internal_server_error(e):
+    app.logger.error(f"Internal Server Error: {e}", exc_info=True)
     user = session.get("user")
     if user:
         return render_template(
