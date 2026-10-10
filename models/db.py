@@ -53,7 +53,9 @@ def get_db():
 
     if not _initialized:
         cur = cnx.cursor()
-        cur.execute("""
+        
+        tables = [
+            """
             CREATE TABLE IF NOT EXISTS users (
                 id          INT AUTO_INCREMENT PRIMARY KEY,
                 name        VARCHAR(255) NOT NULL,
@@ -62,12 +64,8 @@ def get_db():
                 role        ENUM('admin','custodian','technician','faculty') NOT NULL DEFAULT 'faculty',
                 created_at  DATETIME NOT NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        """)
-        cur.execute("ALTER TABLE users MODIFY COLUMN role ENUM('admin','custodian','technician','faculty') NOT NULL DEFAULT 'faculty'")
-        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0")
-        cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL")
-
-        cur.execute("""
+            """,
+            """
             CREATE TABLE IF NOT EXISTS equipment (
                 id                INT AUTO_INCREMENT PRIMARY KEY,
                 name              VARCHAR(255) NOT NULL,
@@ -77,11 +75,8 @@ def get_db():
                 qr_code           TEXT,
                 created_at        DATETIME NOT NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        """)
-        cur.execute("ALTER TABLE equipment ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0")
-        cur.execute("ALTER TABLE equipment ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL")
-
-        cur.execute("""
+            """,
+            """
             CREATE TABLE IF NOT EXISTS maintenance_requests (
                 id                  INT AUTO_INCREMENT PRIMARY KEY,
                 equipment_id        INT NOT NULL,
@@ -101,19 +96,8 @@ def get_db():
                 FOREIGN KEY (equipment_id) REFERENCES equipment(id),
                 FOREIGN KEY (reported_by)  REFERENCES users(id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        """)
-        cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0")
-        cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL")
-        cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS technician_id INT NULL")
-        try:
-            cur.execute("ALTER TABLE maintenance_requests ADD CONSTRAINT fk_technician FOREIGN KEY (technician_id) REFERENCES users(id) ON DELETE SET NULL")
-        except Exception:
-            pass  # Constraint may already exist
-        cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS affected_component VARCHAR(100) NULL")
-        cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS repair_start DATETIME NULL")
-        cur.execute("ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS technician_notes TEXT NULL")
-
-        cur.execute("""
+            """,
+            """
             CREATE TABLE IF NOT EXISTS maintenance_logs (
                 id              INT AUTO_INCREMENT PRIMARY KEY,
                 equipment_id    INT NOT NULL,
@@ -126,12 +110,8 @@ def get_db():
                 FOREIGN KEY (equipment_id) REFERENCES equipment(id),
                 FOREIGN KEY (request_id)   REFERENCES maintenance_requests(id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        """)
-        cur.execute("ALTER TABLE maintenance_logs ADD COLUMN IF NOT EXISTS repair_start DATETIME NULL")
-        cur.execute("ALTER TABLE maintenance_logs ADD COLUMN IF NOT EXISTS duration_minutes INT NULL")
-        cur.execute("ALTER TABLE maintenance_logs ADD COLUMN IF NOT EXISTS technician_id INT NULL")
-
-        cur.execute("""
+            """,
+            """
             CREATE TABLE IF NOT EXISTS activity_logs (
                 id            INT AUTO_INCREMENT PRIMARY KEY,
                 actor_id      INT,
@@ -141,9 +121,8 @@ def get_db():
                 target_id     INT,
                 created_at    DATETIME NOT NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        """)
-
-        cur.execute("""
+            """,
+            """
             CREATE TABLE IF NOT EXISTS notifications (
                 id          INT AUTO_INCREMENT PRIMARY KEY,
                 user_id     INT NOT NULL,
@@ -153,7 +132,46 @@ def get_db():
                 created_at  DATETIME NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
-        """)
+            """
+        ]
+
+        for tbl_sql in tables:
+            try:
+                cur.execute(tbl_sql)
+                cnx.commit()
+            except Exception:
+                pass
+
+        migrations = [
+            "ALTER TABLE users MODIFY COLUMN role ENUM('admin','custodian','technician','faculty') NOT NULL DEFAULT 'faculty'",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL",
+            "ALTER TABLE equipment ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0",
+            "ALTER TABLE equipment ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL",
+            "ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS is_deleted TINYINT(1) NOT NULL DEFAULT 0",
+            "ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS deleted_at DATETIME NULL",
+            "ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS technician_id INT NULL",
+            "ALTER TABLE maintenance_requests ADD CONSTRAINT fk_technician FOREIGN KEY (technician_id) REFERENCES users(id) ON DELETE SET NULL",
+            "ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS affected_component VARCHAR(100) NULL",
+            "ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS repair_start DATETIME NULL",
+            "ALTER TABLE maintenance_requests ADD COLUMN IF NOT EXISTS technician_notes TEXT NULL",
+            "ALTER TABLE maintenance_logs ADD COLUMN IF NOT EXISTS repair_start DATETIME NULL",
+            "ALTER TABLE maintenance_logs ADD COLUMN IF NOT EXISTS duration_minutes INT NULL",
+            "ALTER TABLE maintenance_logs ADD COLUMN IF NOT EXISTS technician_id INT NULL",
+        ]
+
+        for mig in migrations:
+            try:
+                cur.execute(mig)
+                cnx.commit()
+            except Exception:
+                if "ADD COLUMN IF NOT EXISTS" in mig:
+                    try:
+                        fallback = mig.replace("ADD COLUMN IF NOT EXISTS", "ADD COLUMN")
+                        cur.execute(fallback)
+                        cnx.commit()
+                    except Exception:
+                        pass
 
         # Performance indexes for frequent queries, joins, and filtering
         indexes = [
@@ -174,10 +192,16 @@ def get_db():
         for idx_sql in indexes:
             try:
                 cur.execute(idx_sql)
+                cnx.commit()
             except Exception:
-                pass
+                if "CREATE INDEX IF NOT EXISTS" in idx_sql:
+                    try:
+                        fallback_idx = idx_sql.replace("CREATE INDEX IF NOT EXISTS", "CREATE INDEX")
+                        cur.execute(fallback_idx)
+                        cnx.commit()
+                    except Exception:
+                        pass
 
-        cnx.commit()
         cur.close()
         _initialized = True
 

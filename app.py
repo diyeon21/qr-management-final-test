@@ -184,12 +184,14 @@ def not_found_error(e):
 def internal_server_error(e):
     app.logger.error(f"Internal Server Error: {e}", exc_info=True)
     user = session.get("user")
+    orig_err = getattr(e, "original_exception", e)
     if user:
+        err_detail = f"An unexpected system error occurred: {orig_err}" if user.get("role") == "admin" else "An unexpected system error occurred. Please try again or return to your dashboard."
         return render_template(
             "error.html",
             code=500,
             title="Server Error",
-            message="An unexpected system error occurred. Please try again or return to your dashboard.",
+            message=err_detail,
             user=user
         ), 500
     return render_template("login.html", error="A temporary server error occurred. Please try again later."), 500
