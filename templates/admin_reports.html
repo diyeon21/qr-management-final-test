@@ -51,14 +51,14 @@
     position: sticky;
     top: 0;
     z-index: 1000;
-    background: #15253a;
+    background: #0f172a;
     color: #ffffff;
     padding: 12px 24px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.3);
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    border-bottom: 2px solid #d4a94d;
+    border-bottom: 2px solid #3b82f6;
 }
 body.doc-preview-active .doc-preview-bar {
     display: flex !important;
@@ -602,7 +602,7 @@ body.doc-preview-active .stat-card::before {
         <span style="font-size:0.8rem;opacity:0.85;background:rgba(255,255,255,0.15);padding:2px 8px;border-radius:4px;">Official Institutional Format</span>
     </div>
     <div style="display:flex;align-items:center;gap:10px;">
-        <button type="button" class="btn btn-sm" onclick="window.print()" >
+        <button type="button" class="btn btn-sm" onclick="window.print()" style="background:#2563eb;color:#fff;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
             Print Now / Save PDF
         </button>
@@ -1179,7 +1179,7 @@ body.doc-preview-active .stat-card::before {
 
     <!-- Dedicated Individual Technician Report Dossier (When a technician is selected) -->
     {% if individual_tech_report %}
-    <div class="card" style="margin-bottom:24px; border:2px solid var(--primary); background:var(--surface-solid); padding:18px;">
+    <div class="card" style="margin-bottom:24px; border:2px solid var(--primary); background:rgba(21,71,160,0.02); padding:18px;">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:1px solid var(--line); padding-bottom:12px; margin-bottom:16px;">
             <div>
                 <span class="badge badge-info" style="font-size:0.75rem; font-weight:700; text-transform:uppercase;">Dedicated Individual Technician Report Dossier</span>
@@ -1645,13 +1645,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     {
                         label: 'Total Reported',
                         data: {{ monthly|map(attribute='total')|list|tojson }},
-                        backgroundColor: '#1d3d63',
+                        backgroundColor: 'rgba(37, 99, 235, 0.75)',
                         borderRadius: 5
                     },
                     {
                         label: 'Resolved',
                         data: {{ monthly|map(attribute='resolved')|list|tojson }},
-                        backgroundColor: '#b8860b',
+                        backgroundColor: 'rgba(16, 185, 129, 0.75)',
                         borderRadius: 5
                     }
                 ]
