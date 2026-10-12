@@ -121,6 +121,24 @@
     <form method="POST" enctype="multipart/form-data" style="margin-top:24px;" id="manualReportForm">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+        <!-- Laboratory Selection Dropdown -->
+        <div class="form-group" style="margin-bottom:18px;">
+            <label for="laboratory_select" style="display:block; font-weight:600; margin-bottom:6px;">
+                Select Laboratory / Room <span style="font-size:0.85rem; font-weight:400; color:var(--text-muted);">(Filter by Lab)</span>
+            </label>
+            <select name="laboratory" id="laboratory_select" style="width:100%;" onchange="filterEquipmentByLab(this.value)">
+                <option value="">— All Laboratories / Select a Lab —</option>
+                {% for lab in laboratories %}
+                <option value="{{ lab }}" {% if (form.get('laboratory') or '') == lab %}selected{% endif %}>
+                    {{ lab }}
+                </option>
+                {% endfor %}
+            </select>
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;">
+                Choose a laboratory to quickly filter the equipment list below.
+            </div>
+        </div>
+
         <!-- Equipment -->
         <div class="form-group" style="margin-bottom:18px;">
             <label for="equipment_id" style="display:block; font-weight:600; margin-bottom:6px;">
@@ -245,18 +263,100 @@
 </div>
 
 <script>
+var allEquipmentOptions = [];
+
+function initEquipmentOptions() {
+    var sel = document.getElementById('equipment_id');
+    if (!sel) return;
+    allEquipmentOptions = [];
+    for (var i = 0; i < sel.options.length; i++) {
+        var opt = sel.options[i];
+        allEquipmentOptions.push({
+            value: opt.value,
+            text: opt.text,
+            category: opt.dataset.category || '',
+            location: opt.dataset.location || '',
+            selected: opt.selected
+        });
+    }
+}
+
+function filterEquipmentByLab(selectedLab, preserveVal) {
+    var sel = document.getElementById('equipment_id');
+    if (!sel || !allEquipmentOptions.length) return;
+    
+    var currentVal = preserveVal || sel.value;
+    sel.innerHTML = '';
+    
+    var defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = selectedLab ? '— Select equipment in ' + selectedLab + ' —' : '— Select equipment —';
+    sel.appendChild(defaultOpt);
+    
+    var hasMatch = false;
+    var matchCount = 0;
+    allEquipmentOptions.forEach(function (item) {
+        if (!item.value) return;
+        if (!selectedLab || item.location.trim().toLowerCase() === selectedLab.trim().toLowerCase()) {
+            var opt = document.createElement('option');
+            opt.value = item.value;
+            opt.textContent = item.text;
+            opt.dataset.category = item.category;
+            opt.dataset.location = item.location;
+            if (item.value === currentVal) {
+                opt.selected = true;
+                hasMatch = true;
+            }
+            sel.appendChild(opt);
+            matchCount++;
+        }
+    });
+    
+    if (selectedLab && matchCount === 0) {
+        defaultOpt.textContent = '— No equipment found in ' + selectedLab + ' —';
+    }
+    
+    if (!hasMatch) {
+        sel.value = '';
+    }
+    updateEquipmentInfo(sel);
+}
+
 function updateEquipmentInfo(sel) {
     var opt  = sel.options[sel.selectedIndex];
     var info = document.getElementById('equipmentInfo');
-    if (!opt.value) { info.style.display = 'none'; return; }
+    if (!opt || !opt.value) { 
+        if (info) info.style.display = 'none'; 
+        return; 
+    }
     document.getElementById('infoCategory').textContent = opt.dataset.category || '—';
     document.getElementById('infoLocation').textContent = opt.dataset.location || '—';
-    info.style.display = 'block';
+    if (info) info.style.display = 'block';
+
+    // Auto-select lab dropdown if currently unselected
+    var labSel = document.getElementById('laboratory_select');
+    if (labSel && opt.dataset.location && !labSel.value) {
+        var eqLoc = opt.dataset.location.trim().toLowerCase();
+        for (var i = 0; i < labSel.options.length; i++) {
+            if (labSel.options[i].value.trim().toLowerCase() === eqLoc) {
+                labSel.value = labSel.options[i].value;
+                break;
+            }
+        }
+    }
 }
 
 window.addEventListener('DOMContentLoaded', function () {
+    initEquipmentOptions();
+
+    var labSel = document.getElementById('laboratory_select');
     var sel = document.getElementById('equipment_id');
-    if (sel.value) { updateEquipmentInfo(sel); }
+
+    if (labSel && labSel.value) {
+        filterEquipmentByLab(labSel.value, sel ? sel.value : '');
+    } else if (sel && sel.value) {
+        updateEquipmentInfo(sel);
+    }
 
     var desc = document.getElementById('description');
     var cc   = document.getElementById('charCount');

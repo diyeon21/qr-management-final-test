@@ -760,6 +760,29 @@ def index():
         db.close()
 
 
+def _get_manual_report_data(cur):
+    cur.execute(
+        "SELECT id, name, category, location FROM equipment "
+        "WHERE (is_deleted IS NULL OR is_deleted=0) "
+        "ORDER BY location ASC, name ASC"
+    )
+    equipment_list = cur.fetchall()
+
+    labs_set = set(ALLOWED_LABORATORIES)
+    for eq in equipment_list:
+        loc = normalize_text(eq.get("location"))
+        if loc:
+            labs_set.add(loc)
+
+    def _lab_sort_key(name):
+        import re
+        m = re.search(r"(\d+)", name)
+        return (int(m.group(1)) if m else 999, name)
+
+    laboratories = sorted(list(labs_set), key=_lab_sort_key)
+    return equipment_list, laboratories
+
+
 @reports_bp.route("/manual_report", methods=["GET", "POST"])
 @role_required("faculty", "admin")
 @csrf_protect
@@ -787,12 +810,12 @@ def manual_report():
                     errors.append("Selected equipment not found or inactive.")
 
             if errors:
-                cur.execute("SELECT id, name, category, location FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0) ORDER BY name ASC")
-                equipment_list = cur.fetchall()
+                equipment_list, laboratories = _get_manual_report_data(cur)
                 cur.close()
                 return render_template(
                     "manual_report.html",
                     equipment_list=equipment_list,
+                    laboratories=laboratories,
                     errors=errors,
                     form=request.form,
                 ), 400
@@ -839,12 +862,12 @@ def manual_report():
             return redirect(url_for("my_req.index"))
 
         # GET
-        cur.execute("SELECT id, name, category, location FROM equipment WHERE (is_deleted IS NULL OR is_deleted=0) ORDER BY name ASC")
-        equipment_list = cur.fetchall()
+        equipment_list, laboratories = _get_manual_report_data(cur)
         cur.close()
         return render_template(
             "manual_report.html",
             equipment_list=equipment_list,
+            laboratories=laboratories,
             errors=[],
             form={},
             success=request.args.get("success"),
