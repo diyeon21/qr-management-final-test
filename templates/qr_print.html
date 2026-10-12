@@ -5,20 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Print QR Codes — Equipment Maintenance</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #2563eb;
-            --text: #0f172a;
-            --muted: #64748b;
-            --line: #e2e8f0;
-            --bg: #f8fafc;
+            --primary: #1d3d63;
+            --text: #1c2128;
+            --muted: #5a616c;
+            --line: #d5cfbf;
+            --bg: #eeebe3;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Outfit', system-ui, sans-serif;
+            font-family: 'IBM Plex Sans', system-ui, sans-serif;
             background: var(--bg);
             color: var(--text);
             padding: 20px;
@@ -31,42 +31,41 @@
             gap: 12px;
             flex-wrap: wrap;
             padding: 14px 20px;
-            background: #fff;
+            background: #fdfcf8;
             border: 1px solid var(--line);
-            border-radius: 10px;
+            border-top: 2px solid var(--text);
             margin-bottom: 24px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
         }
 
-        .screen-bar h1 { font-size: 1.1rem; font-weight: 700; color: var(--text); }
+        .screen-bar h1 { font-family: 'Source Serif 4', Georgia, serif; font-size: 1.2rem; font-weight: 600; color: var(--text); }
         .screen-bar p { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
 
         .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
         .btn {
             display: inline-flex; align-items: center; gap: 8px;
-            padding: 9px 18px; border-radius: 6px;
-            font-family: inherit; font-size: 0.875rem; font-weight: 600;
+            padding: 8px 16px; border-radius: 3px;
+            font-family: inherit; font-size: 0.86rem; font-weight: 500;
             cursor: pointer; text-decoration: none; border: 1px solid transparent;
-            transition: all 0.15s ease;
+            transition: background-color 0.12s ease;
         }
-        .btn-primary { background: var(--primary); color: #fff; }
-        .btn-primary:hover { background: #1d4ed8; }
-        .btn-secondary { background: #fff; color: var(--text); border-color: var(--line); }
-        .btn-secondary:hover { background: var(--bg); }
+        .btn-primary { background: var(--primary); color: #fbf9f3; }
+        .btn-primary:hover { background: #132a47; }
+        .btn-secondary { background: transparent; color: var(--text); border-color: #b4ad9a; }
+        .btn-secondary:hover { background: #e6e2d6; }
 
         .qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
         .qr-card {
-            background: #fff; border: 1px solid var(--line); border-radius: 10px;
+            background: #fff; border: 1px solid var(--line); border-radius: 0;
             padding: 20px 16px 16px; text-align: center;
             page-break-inside: avoid; break-inside: avoid;
         }
-        .qr-card img { width: 140px; height: 140px; display: block; margin: 0 auto 14px; border-radius: 4px; object-fit: contain; }
-        .qr-name { font-size: 0.9rem; font-weight: 700; color: var(--text); margin-bottom: 4px; word-break: break-word; }
+        .qr-card img { width: 140px; height: 140px; display: block; margin: 0 auto 14px; object-fit: contain; }
+        .qr-name { font-size: 0.9rem; font-weight: 600; color: var(--text); margin-bottom: 4px; word-break: break-word; }
         .qr-sub { font-size: 0.78rem; color: var(--muted); margin-bottom: 12px; }
         .qr-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-        .qr-actions a { font-size: 0.78rem; font-weight: 600; padding: 5px 12px; border-radius: 5px; text-decoration: none; border: 1px solid transparent; }
-        .btn-dl { background: var(--primary); color: #fff; }
-        .btn-dl:hover { background: #1d4ed8; }
+        .qr-actions a { font-size: 0.78rem; font-weight: 500; padding: 5px 12px; border-radius: 3px; text-decoration: none; border: 1px solid transparent; }
+        .btn-dl { background: var(--primary); color: #fbf9f3; }
+        .btn-dl:hover { background: #132a47; }
         .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
         .empty-state h2 { font-size: 1.2rem; margin-bottom: 8px; color: var(--text); }
         .empty-state p { font-size: 0.9rem; }

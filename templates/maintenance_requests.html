@@ -11,25 +11,11 @@
     </div>
 
     {% if request.args.get('error') == 'action_required' %}
-    <div style="
-        background: rgba(239,68,68,0.1);
-        border: 1px solid rgba(239,68,68,0.35);
-        color: #991b1b;
-        border-radius: 10px;
-        padding: 14px 18px;
-        margin: 12px 0 0;
-    ">
+    <div class="alert error" style="margin: 12px 0 0;">
         <strong>Action required:</strong> You must describe the action taken / repair notes before submitting.
     </div>
     {% elif request.args.get('error') == 'admin_approval_required' %}
-    <div style="
-        background: rgba(245,158,11,0.1);
-        border: 1px solid rgba(245,158,11,0.35);
-        color: #b45309;
-        border-radius: 10px;
-        padding: 14px 18px;
-        margin: 12px 0 0;
-    ">
+    <div class="alert" style="margin: 12px 0 0; border-left-color: var(--warning); color: var(--warning);">
         <strong>Verification Required:</strong> Only an Administrator can officially close and resolve a request after reviewing completed work.
     </div>
     {% endif %}
@@ -51,7 +37,7 @@
             </thead>
             <tbody>
                 {% for r in rows %}
-                <tr style="{{ 'background: rgba(37,99,235,0.04);' if r.status == 'Completed - Pending Verification' else '' }}">
+                <tr style="{{ 'background: var(--bg-accent);' if r.status == 'Completed - Pending Verification' else '' }}">
                     <td>
                         <strong>{{ (r.equipment_name or 'Deleted')|clean }}</strong>
                         {% if r.affected_component %}
@@ -74,7 +60,7 @@
                         {% endif %}
 
                         {% if r.technician_notes %}
-                        <div style="margin-top: 8px; font-size: 0.8rem; background: rgba(37,99,235,0.07); border: 1px solid rgba(37,99,235,0.2); border-radius: 6px; padding: 6px 10px;">
+                        <div style="margin-top: 8px; font-size: 0.8rem; background: var(--bg-accent); border: 1px solid var(--line); border-radius: 2px; padding: 6px 10px;">
                             <strong style="color: var(--primary); display: flex; align-items: center; gap: 4px;">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
                                 Technician Repair Notes:
@@ -170,7 +156,7 @@
                                 <div class="action-input-group" style="display: {{ 'flex' if r.status in ['Resolved', 'Completed - Pending Verification'] else 'none' }}; gap: 6px; flex-direction: column;">
                                     <input type="text" name="action_taken" placeholder="Action taken / Resolution notes"
                                         value="{{ r.technician_notes or '' }}" style="margin: 0; flex: 1;">
-                                    <span class="action-error" style="display:none; color:#ef4444; font-size:0.8rem;">
+                                    <span class="action-error" style="display:none; color:var(--danger); font-size:0.8rem;">
                                         Please describe the action taken before resolving.
                                     </span>
                                 </div>
@@ -217,7 +203,7 @@
                                 <div class="action-input-group" style="display: {{ 'flex' if r.status == 'In Progress' else 'none' }}; gap: 6px; flex-direction: column;">
                                     <input type="text" name="action_taken" placeholder="Action taken / repair notes (required for completion)"
                                         value="{{ r.technician_notes or '' }}" style="margin: 0; flex: 1;">
-                                    <span class="action-error" style="display:none; color:#ef4444; font-size:0.8rem;">
+                                    <span class="action-error" style="display:none; color:var(--danger); font-size:0.8rem;">
                                         Please describe what was repaired or done.
                                     </span>
                                 </div>

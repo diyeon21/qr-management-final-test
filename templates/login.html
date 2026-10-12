@@ -3,609 +3,306 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="Sign in to the NEUST CICT Equipment Diagnostics and QR Management System.">
 <title>Sign In — NEUST CICT QRMS</title>
 <script>
 (function(){
-  var saved=localStorage.getItem('theme');
-  if(saved==='dark'){
-    document.documentElement.setAttribute('data-theme','dark');
-  }
+  var saved = localStorage.getItem('theme');
+  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', saved || (prefersDark ? 'dark' : 'light'));
 })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-
-:root {
-  --navy:  #071236;
-  --blue:  #1a4fd6;
-  --blue2: #2563eb;
-  --surface: #ffffff;
-  --bg:    #f0f4fb;
-  --text:  #0f172a;
-  --muted: #64748b;
-  --line:  #e2e8f2;
-  --font:  'Outfit', system-ui, sans-serif;
-  --r:     12px;
+.signin {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  min-height: 100vh;
+  width: 100%;
 }
 
-[data-theme="dark"] {
-  --surface: #141f38;
-  --bg:      #0c1527;
-  --text:    #e8efff;
-  --muted:   #7a90b8;
-  --line:    #1f3060;
+/* ── Left: cover ── */
+.cover {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 44px 56px 36px;
+  color: #f4f1e8;
+  background: var(--side-bg);
+  overflow: hidden;
+}
+.cover-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 30% center;
+  filter: grayscale(1) contrast(1.05);
+  opacity: 0.55;
+}
+.cover-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(21, 37, 58, 0.78);
+}
+.cover > *:not(.cover-photo):not(.cover-scrim) { position: relative; }
+
+.letterhead {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid rgba(244, 241, 232, 0.28);
+}
+.letterhead img {
+  width: 68px; height: 68px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.letterhead p {
+  margin: 0;
+  color: rgba(244, 241, 232, 0.72);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  line-height: 1.7;
+}
+.letterhead strong {
+  display: block;
+  margin: 2px 0;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #f4f1e8;
 }
 
-html,body{min-height:100%;font-family:var(--font);background:var(--bg);overflow-x:hidden;width:100%;max-width:100vw;}
-
-/* ════════════════════════════════
-   PAGE GRID  65 / 35
-════════════════════════════════ */
-.page{
-  display:grid;
-  grid-template-columns:65% 35%;
-  min-height:100vh;
-  width:100%;
-  max-width:100%;
-  overflow-x:hidden;
+.cover-body { max-width: 520px; padding: 40px 0; }
+.cover-kicker {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--side-accent);
+  margin: 0 0 14px;
+}
+.cover-title {
+  font-size: clamp(1.9rem, 3vw, 2.7rem);
+  line-height: 1.12;
+  font-weight: 600;
+  color: #f4f1e8;
+  margin: 0 0 28px;
+}
+.procedure {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: step;
+  border-top: 1px solid rgba(244, 241, 232, 0.28);
+}
+.procedure li {
+  counter-increment: step;
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(244, 241, 232, 0.14);
+  font-size: 0.9rem;
+  color: rgba(244, 241, 232, 0.86);
+}
+.procedure li::before {
+  content: counter(step, decimal-leading-zero);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--side-accent);
+  padding-top: 3px;
 }
 
-/* ════════════════════════════════
-   LEFT PANEL
-════════════════════════════════ */
-.lp{
-  position:relative;
-  background:linear-gradient(150deg,#050e28 0%,#0a1c4b 35%,#1035a0 70%,#1a4fd6 100%);
-  display:flex;
-  flex-direction:column;
-  padding:44px 64px;
-  overflow:hidden;
-  color:#fff;
+.cover-foot {
+  margin: 0;
+  max-width: 520px;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: rgba(244, 241, 232, 0.55);
 }
 
-/* CICT Building Background */
-.lp-building-bg{
-  position:absolute;
-  inset:0;
-  background-image:url("{{ url_for('static', filename='bg-building.png') }}");
-  background-size:cover;
-  background-position:center;
-  background-repeat:no-repeat;
-  opacity:0.20;
-  z-index:0;
-  pointer-events:none;
+/* ── Right: form ── */
+.formside {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+  background: var(--surface);
+  border-left: 1px solid var(--line-strong);
 }
+.formside .theme-switch { position: absolute; top: 20px; right: 20px; }
 
-/* grid texture */
-.lp::before{
-  content:"";
-  position:absolute;inset:0;
-  background-image:
-    linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);
-  background-size:56px 56px;
-  z-index:0;
+.formwrap { width: 100%; max-width: 360px; }
+.formwrap h1 {
+  font-size: 1.9rem;
+  margin: 0 0 6px;
 }
-
-/* soft radial glow */
-.lp::after{
-  content:"";
-  position:absolute;
-  width:600px;height:600px;
-  border-radius:50%;
-  background:radial-gradient(circle,rgba(90,150,255,0.18) 0%,transparent 70%);
-  bottom:-200px;right:-150px;
-  z-index:0;
+.formwrap .lede {
+  margin: 0 0 26px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.88rem;
 }
+.formwrap .alert { margin-bottom: 20px; }
+.formwrap label:first-of-type { margin-top: 0; }
 
-.orb{position:absolute;border-radius:50%;z-index:0;animation:float 8s ease-in-out infinite;}
-.orb1{width:340px;height:340px;top:-100px;right:80px;background:radial-gradient(circle,rgba(100,170,255,0.1),transparent 70%);}
-.orb2{width:220px;height:220px;bottom:80px;left:-60px;background:radial-gradient(circle,rgba(255,255,255,0.06),transparent 70%);animation-delay:-4s;}
-
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-16px)}}
-
-/* thin white shimmer bar */
-.lp-bar{position:absolute;top:0;left:0;right:0;height:3px;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.45),transparent);z-index:2;}
-
-.lp-inner{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;}
-
-/* ── Logo row ── */
-.lp-logo-row{display:flex;align-items:center;gap:16px;margin-bottom:auto;}
-
-.lp-logo-img{
-  width:72px;height:72px;border-radius:50%;
-  object-fit:cover;
-  overflow:hidden;
-  background:rgba(255,255,255,0.08);
-  border:2px solid rgba(255,255,255,0.28);
-  box-shadow:0 0 0 7px rgba(255,255,255,0.05),0 10px 30px rgba(0,0,0,0.35);
-  flex-shrink:0;
+.pw { position: relative; }
+.pw input { padding-right: 64px; }
+.pw .reveal {
+  position: absolute;
+  right: 4px; top: 4px;
+  min-height: 0;
+  padding: 6px 10px;
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
+.pw .reveal:hover { background: var(--bg-accent); color: var(--primary-hover); }
 
-.lp-id strong{display:block;font-size:0.9rem;font-weight:800;color:#fff;letter-spacing:0.01em;}
-.lp-id span{font-size:0.68rem;color:rgba(255,255,255,0.5);font-weight:400;margin-top:2px;display:block;}
+.remember {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 20px;
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.remember input { width: 14px; height: 14px; margin: 0; }
+.formwrap .submit { width: 100%; min-height: 44px; font-size: 0.92rem; }
 
-/* ── Center copy ── */
-.lp-center{flex:1;display:flex;flex-direction:column;justify-content:center;padding:48px 0 32px;}
-
-.lp-title{
-  font-size:clamp(1.9rem,3vw,2.8rem);
-  font-weight:900;line-height:1.15;letter-spacing:-0.03em;
-  color:#fff;margin-bottom:18px;max-width:560px;
+@media (max-width: 900px) {
+  .signin { grid-template-columns: 1fr; }
+  .cover { padding: 28px 24px 24px; }
+  .cover-body { padding: 24px 0 8px; }
+  .procedure, .cover-foot { display: none; }
+  .cover-title { font-size: 1.5rem; margin-bottom: 0; }
+  .formside { border-left: none; border-top: 1px solid var(--line-strong); padding: 40px 20px 56px; }
 }
-.lp-title em{font-style:normal;color:rgba(255,255,255,0.65);font-weight:600;}
-
-.lp-desc{
-  font-size:0.88rem;color:rgba(255,255,255,0.5);
-  line-height:1.75;max-width:520px;margin-bottom:44px;font-weight:400;
-}
-
-/* ── Feature pills ── */
-.lp-pills{display:flex;flex-wrap:wrap;gap:10px;}
-
-.lp-pill{
-  display:inline-flex;align-items:center;gap:8px;
-  background:rgba(255,255,255,0.06);
-  border:1px solid rgba(255,255,255,0.1);
-  backdrop-filter:blur(6px);
-  border-radius:999px;padding:7px 15px;
-  font-size:0.75rem;color:rgba(255,255,255,0.78);font-weight:500;
-  transition:background 0.2s,border-color 0.2s;
-}
-.lp-pill:hover{background:rgba(255,255,255,0.11);border-color:rgba(255,255,255,0.18);}
-.pill-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.55);flex-shrink:0;}
-
-/* ── Footer ── */
-.lp-footer{
-  font-size:0.68rem;color:rgba(255,255,255,0.2);line-height:1.6;
-  padding-top:24px;border-top:1px solid rgba(255,255,255,0.07);margin-top:auto;
-}
-
-/* ════════════════════════════════
-   RIGHT PANEL
-════════════════════════════════ */
-.rp{
-  position:relative;
-  background:linear-gradient(160deg,#edf1fb 0%,#e4eaf7 100%);
-  border-left:1px solid rgba(0,0,0,0.07);
-  display:flex;align-items:center;justify-content:center;
-  padding:40px 28px;
-  transition:background 0.3s;
-  overflow:hidden;
-}
-[data-theme="dark"] .rp{
-  background:linear-gradient(160deg,#080f24 0%,#060c1c 100%);
-}
-
-/* particles canvas */
-#rp-canvas{
-  position:absolute;top:0;left:0;width:100%;height:100%;
-  pointer-events:none;z-index:0;
-  opacity:0.45;
-}
-
-/* radial glow spotlight behind card */
-.rp-glow{
-  position:absolute;
-  width:420px;height:420px;
-  border-radius:50%;
-  background:radial-gradient(circle,rgba(37,99,235,0.13) 0%,transparent 70%);
-  z-index:0;
-  pointer-events:none;
-  animation:glowPulse 4s ease-in-out infinite;
-}
-[data-theme="dark"] .rp-glow{
-  background:radial-gradient(circle,rgba(59,130,246,0.18) 0%,transparent 70%);
-}
-@keyframes glowPulse{
-  0%,100%{transform:scale(1);opacity:0.8;}
-  50%{transform:scale(1.12);opacity:1;}
-}
-
-/* theme toggle */
-.theme-btn{
-  position:absolute;top:16px;right:16px;z-index:10;
-  width:34px;height:34px;border-radius:50%;
-  background:var(--bg);border:1px solid var(--line);
-  display:flex;align-items:center;justify-content:center;
-  cursor:pointer;color:var(--muted);
-  transition:all 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.06);
-}
-.theme-btn:hover{color:var(--text);box-shadow:0 3px 10px rgba(0,0,0,0.1);}
-.theme-btn input{display:none;}
-.theme-btn .sun{display:none;}
-.theme-btn .moon{display:block;}
-input:checked~.ti .sun{display:block;}
-input:checked~.ti .moon{display:none;}
-
-/* ── Login Card ── */
-.login-card{
-  position:relative;z-index:1;
-  width:100%;max-width:340px;
-  background:rgba(255,255,255,0.92);
-  border-radius:20px;
-  padding:28px 26px 24px;
-  border:1px solid rgba(255,255,255,0.8);
-  box-shadow:
-    0 2px 4px rgba(0,0,0,0.04),
-    0 10px 24px rgba(15,30,80,0.09),
-    0 28px 52px rgba(15,30,80,0.11);
-  backdrop-filter:blur(12px);
-  transition:background 0.3s,box-shadow 0.3s;
-  overflow:hidden;
-}
-[data-theme="dark"] .login-card{
-  background:rgba(18,30,62,0.75);
-  border-color:rgba(255,255,255,0.07);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,0.04),
-    0 12px 40px rgba(0,0,0,0.5),
-    0 0 80px rgba(37,99,235,0.08);
-  backdrop-filter:blur(20px);
-}
-
-/* Logo ring wrapper */
-.card-logo-wrap{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  margin-bottom:18px;
-}
-.card-logo-ring{
-  width:62px;height:62px;
-  border-radius:50%;
-  overflow:hidden;
-  border:2px solid rgba(37,99,235,0.22);
-  box-shadow:
-    0 0 0 4px rgba(37,99,235,0.06),
-    0 0 0 8px rgba(37,99,235,0.03),
-    0 6px 18px rgba(37,99,235,0.18);
-  flex-shrink:0;
-  background:transparent;
-  animation:ringPulse 3s ease-in-out infinite;
-}
-@keyframes ringPulse{
-  0%,100%{box-shadow:0 0 0 4px rgba(37,99,235,0.06),0 0 0 8px rgba(37,99,235,0.03),0 6px 18px rgba(37,99,235,0.18);}
-  50%{box-shadow:0 0 0 6px rgba(37,99,235,0.09),0 0 0 12px rgba(37,99,235,0.04),0 6px 22px rgba(37,99,235,0.25);}
-}
-.card-logo-ring img{
-  width:100%;height:100%;
-  object-fit:cover;
-  display:block;
-}
-
-.card-heading{margin-bottom:20px;}
-.card-heading h1{
-  font-size:1.2rem;font-weight:800;
-  color:var(--text);letter-spacing:-0.02em;margin-bottom:3px;
-}
-.card-heading p{font-size:0.75rem;color:var(--muted);font-weight:400;}
-/* blue accent underline */
-.card-heading::after{
-  content:"";
-  display:block;
-  width:28px;height:2.5px;
-  background:var(--blue2);
-  border-radius:2px;
-  margin-top:10px;
-}
-
-/* Alert */
-.alert{
-  padding:10px 13px;border-radius:9px;
-  font-size:0.8rem;font-weight:500;margin-bottom:16px;
-  border:1px solid transparent;display:flex;align-items:center;gap:8px;
-}
-.alert.error{background:#fef2f2;color:#dc2626;border-color:#fecaca;}
-[data-theme="dark"] .alert.error{background:rgba(220,38,38,0.1);border-color:rgba(220,38,38,0.22);}
-
-/* Field */
-.field{margin-bottom:12px;}
-
-.field label{
-  display:block;font-size:0.68rem;font-weight:700;
-  text-transform:uppercase;letter-spacing:0.07em;
-  color:var(--muted);margin-bottom:5px;
-}
-
-.input-wrap{position:relative;}
-
-.input-wrap .ico{
-  position:absolute;left:11px;top:50%;
-  transform:translateY(-50%);
-  color:var(--muted);pointer-events:none;
-  display:flex;align-items:center;
-}
-
-.input-wrap input{
-  width:100%;padding:10px 11px 10px 36px;
-  border:1.5px solid var(--line);
-  border-radius:9px;font-family:var(--font);
-  font-size:0.85rem;background:var(--bg);
-  color:var(--text);outline:none;
-  transition:border-color 0.18s,box-shadow 0.18s,background 0.3s;
-}
-.input-wrap input::placeholder{color:#b8c4d4;}
-.input-wrap input:hover{border-color:#aab4cc;}
-.input-wrap input:focus{
-  border-color:var(--blue2);background:var(--surface);
-  box-shadow:0 0 0 3px rgba(37,99,235,0.1);
-}
-
-[data-theme="dark"] .input-wrap input{background:#0c1527;border-color:#1f3060;}
-[data-theme="dark"] .input-wrap input:focus{background:#101e3a;box-shadow:0 0 0 3px rgba(59,130,246,0.15);}
-
-/* eye btn */
-.eye-btn{
-  position:absolute;right:11px;top:50%;
-  transform:translateY(-50%);
-  background:none;border:none;padding:4px;
-  cursor:pointer;color:var(--muted);
-  display:flex;align-items:center;min-height:0;box-shadow:none;
-  transition:color 0.2s;
-}
-.eye-btn:hover{color:var(--text);}
-
-/* field row */
-.field-row{
-  display:flex;align-items:center;
-  justify-content:space-between;
-  margin-bottom:16px;font-size:0.74rem;
-}
-.check-label{display:flex;align-items:center;gap:6px;color:var(--muted);cursor:pointer;font-weight:500;}
-.check-label input[type=checkbox]{width:13px;height:13px;accent-color:var(--blue2);cursor:pointer;}
-.forgot-link{color:var(--blue2);text-decoration:none;font-weight:600;font-size:0.74rem;transition:opacity 0.2s;}
-.forgot-link:hover{opacity:0.7;}
-
-/* submit */
-.btn-submit{
-  position:relative;overflow:hidden;
-  width:100%;padding:12px;
-  background:linear-gradient(135deg,#0f2e9e,#1a4fd6 50%,#2563eb);
-  color:#fff;border:none;border-radius:9px;
-  font-family:var(--font);font-size:0.88rem;font-weight:700;
-  letter-spacing:0.03em;cursor:pointer;min-height:0;
-  box-shadow:0 4px 18px rgba(26,79,214,0.32),0 1px 3px rgba(26,79,214,0.18);
-  transition:filter 0.2s,box-shadow 0.2s,transform 0.15s;
-  display:flex;align-items:center;justify-content:center;gap:7px;
-}
-.btn-submit:hover{
-  filter:brightness(1.09);
-  box-shadow:0 7px 24px rgba(26,79,214,0.42);
-  transform:translateY(-2px);
-}
-.btn-submit:active{transform:none;filter:none;box-shadow:0 2px 8px rgba(26,79,214,0.25);}
-
-/* card animation */
-.login-card{animation:cardIn 0.45s cubic-bezier(0.22,1,0.36,1) both;}
-@keyframes cardIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
-
-/* ── Responsive (mobile/tablet only) ── */
-@media(max-width:900px){
-  .page{grid-template-columns:1fr;}
-  .lp{padding:36px 28px;min-height:auto;}
-  .lp-pills,.lp-desc{display:none;}
-  .lp-title{font-size:1.5rem;}
-  .rp{padding:40px 24px 56px;border-left:none;}
-}
-@media(max-width:480px){
-  .lp{padding:28px 20px;}
-  .lp-logo-img{width:56px;height:56px;}
-  .lp-id strong{font-size:0.82rem;}
-  .lp-id span{font-size:0.62rem;}
-  .lp-title{font-size:1.25rem;}
-  .lp-center{padding:32px 0 24px;}
-  .lp-footer{font-size:0.62rem;}
-  .rp{padding:32px 16px 48px;}
-  .login-card{padding:24px 20px 20px;max-width:none;}
-  .field-row{flex-direction:column;align-items:flex-start;gap:10px;}
-  .theme-btn{top:14px;right:14px;}
-  input[type="email"], input[type="password"] { font-size: 16px !important; }
+@media (max-width: 480px) {
+  .letterhead img { width: 52px; height: 52px; }
+  .letterhead p { font-size: 0.58rem; }
+  .letterhead strong { font-size: 0.9rem; }
+  .formwrap input { font-size: 16px !important; }
 }
 </style>
 </head>
 <body>
-<div class="page">
+<div class="signin">
 
-<div class="lp">
-  <div class="lp-building-bg"></div>
-  <div class="lp-bar"></div>
-  <div class="orb orb1"></div>
-  <div class="orb orb2"></div>
+  <section class="cover" aria-label="About the system">
+    <img class="cover-photo" src="{{ url_for('static', filename='bg-building.png') }}" alt="">
+    <div class="cover-scrim"></div>
 
-  <div class="lp-inner">
-
-    
-    <div class="lp-logo-row">
-      <img class="lp-logo-img" src="{{ url_for('static', filename='logo.png') }}" alt="NEUST CICT Logo">
-      <div class="lp-id">
-        <strong>NEUST · CICT</strong>
-        <span>Nueva Ecija University of Science &amp; Technology</span>
-      </div>
-    </div>
-
-    
-    <div class="lp-center">
-      <h1 class="lp-title">
-        QR Code-Enabled Repair<br>
-        and Maintenance System<br>
-        <em>for Equipment Management</em>
-      </h1>
-      <p class="lp-desc">
-        A centralized platform for managing repair requests, tracking equipment status, and streamlining custodian workflows — built for NEUST CICT.
+    <header class="letterhead">
+      <img src="{{ url_for('static', filename='logo.png') }}" alt="NEUST College of Information and Communications Technology seal">
+      <p>
+        Republic of the Philippines
+        <strong>Nueva Ecija University of Science and Technology</strong>
+        College of Information and Communications Technology
       </p>
-      <div class="lp-pills">
-        <span class="lp-pill"><span class="pill-dot"></span>QR Code Scanning</span>
-        <span class="lp-pill"><span class="pill-dot"></span>Instant Reporting</span>
-        <span class="lp-pill"><span class="pill-dot"></span>Asset Management</span>
-        <span class="lp-pill"><span class="pill-dot"></span>Admin Dashboard</span>
-        <span class="lp-pill"><span class="pill-dot"></span>Role-Based Access</span>
-      </div>
+    </header>
+
+    <div class="cover-body">
+      <p class="cover-kicker">Property &amp; Maintenance Records</p>
+      <h2 class="cover-title">Equipment Diagnostics and QR Management System</h2>
+      <ol class="procedure">
+        <li>Scan the QR label attached to the equipment.</li>
+        <li>File an issue report against that unit.</li>
+        <li>Technicians record the repair in the logbook.</li>
+        <li>The custodian and administrator review the history.</li>
+      </ol>
     </div>
 
-    <p class="lp-footer">
+    <p class="cover-foot">
       CICT QRMS is a student-run project to provide inventory and property management to the CICT department. It is not affiliated with the university.
     </p>
-  </div>
-</div>
+  </section>
 
-<div class="rp">
-  <canvas id="rp-canvas"></canvas>
-  <div class="rp-glow"></div>
-
-  <div class="login-card">
-    <label class="theme-btn" aria-label="Toggle dark mode">
+  <main class="formside">
+    <label class="theme-switch" aria-label="Toggle dark mode" title="Toggle dark / light mode">
       <input type="checkbox" id="theme-toggle">
-      <span class="ti">
-        <svg class="sun" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-        <svg class="moon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <span class="theme-icon">
+        <svg class="sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        <svg class="moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </span>
     </label>
 
-    <div style="position:relative; z-index:1;">
+    <div class="formwrap">
+      <h1>Sign in</h1>
+      <p class="lede">Use the account issued to you by the CICT administrator.</p>
 
-    
-    <div class="card-logo-wrap">
-      <div class="card-logo-ring">
-        <img src="{{ url_for('static', filename='logo.png') }}" alt="NEUST CICT">
-      </div>
-    </div>
-
-    <div class="card-heading">
-      <h1>Sign In</h1>
-      <p>Access your QRMS account</p>
-    </div>
-
-    {% if error %}
-    <div class="alert error" role="alert">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      {{ error }}
-    </div>
-    {% endif %}
-
-    <form method="post" novalidate>
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      {% if next_url %}
-      <input type="hidden" name="next" value="{{ next_url|clean }}">
+      {% if error %}
+      <div class="alert error" role="alert">{{ error }}</div>
       {% endif %}
-      <div class="field">
-        <label for="email">Email</label>
-        <div class="input-wrap">
-          <span class="ico">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          </span>
-          <input type="email" id="email" name="email" required autofocus
-                 placeholder="you@school.edu" autocomplete="email">
-        </div>
-      </div>
 
-      <div class="field">
+      <form method="post" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if next_url %}
+        <input type="hidden" name="next" value="{{ next_url|clean }}">
+        {% endif %}
+
+        <label for="email">Email address</label>
+        <input type="email" id="email" name="email" required autofocus
+               placeholder="name@neust.edu.ph" autocomplete="email">
+
         <label for="password">Password</label>
-        <div class="input-wrap">
-          <span class="ico">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          </span>
+        <div class="pw">
           <input type="password" id="password" name="password" required
-                 placeholder="••••••••" autocomplete="current-password" style="padding-right:40px;">
-          <button type="button" class="eye-btn" id="eye-btn" aria-label="Show password">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-          </button>
+                 autocomplete="current-password">
+          <button type="button" class="reveal" id="eye-btn" aria-label="Show password">Show</button>
         </div>
-      </div>
 
-      <div class="field-row">
-        <label class="check-label">
-          <input type="checkbox" name="remember"> Remember me
+        <label class="remember">
+          <input type="checkbox" name="remember"> Keep me signed in on this device
         </label>
-      </div>
 
-      <button type="submit" id="btn-signin" class="btn-submit">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-        Sign In
-      </button>
-    </form>
+        <button type="submit" id="btn-signin" class="submit">Sign in</button>
+      </form>
     </div>
-  </div>
-</div>
+  </main>
 
 </div>
 
 <script>
-(function(){
-  var saved=localStorage.getItem('theme');
-  if(saved==='dark'){
-    document.documentElement.setAttribute('data-theme','dark');
-    document.addEventListener('DOMContentLoaded',function(){
-      var cb=document.getElementById('theme-toggle');
-      if(cb)cb.checked=true;
+document.addEventListener('DOMContentLoaded', function () {
+  var cb = document.getElementById('theme-toggle');
+  if (cb) {
+    cb.checked = document.documentElement.getAttribute('data-theme') === 'dark';
+    cb.addEventListener('change', function () {
+      var t = cb.checked ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', t);
+      localStorage.setItem('theme', t);
     });
   }
-  document.addEventListener('DOMContentLoaded',function(){
-    var cb=document.getElementById('theme-toggle');
-    if(cb){
-      cb.addEventListener('change',function(){
-        document.documentElement.setAttribute('data-theme',cb.checked?'dark':'');
-        localStorage.setItem('theme',cb.checked?'dark':'light');
-      });
-    }
-    var eye=document.getElementById('eye-btn');
-    var pw=document.getElementById('password');
-    if(eye&&pw){
-      eye.addEventListener('click',function(){
-        var vis=pw.type==='text';
-        pw.type=vis?'password':'text';
-        eye.setAttribute('aria-label',vis?'Show password':'Hide password');
-      });
-    }
-
-    // ── Floating particles ──
-    var canvas=document.getElementById('rp-canvas');
-    if(canvas){
-      var ctx=canvas.getContext('2d');
-      var particles=[];
-      var isDark=function(){return document.documentElement.getAttribute('data-theme')==='dark';};
-
-      function resize(){
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
-      }
-      window.addEventListener('resize',resize);
-      resize();
-
-      for(var i=0;i<40;i++){
-        particles.push({
-          x:Math.random()*canvas.width,
-          y:Math.random()*canvas.height,
-          r:Math.random()*2+0.8,
-          dx:(Math.random()-0.5)*0.5,
-          dy:(Math.random()-0.5)*0.5,
-          o:Math.random()*0.5+0.15
-        });
-      }
-
-      function drawParticles(){
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        var dark=isDark();
-        var color=dark?'rgba(99,162,255,':'rgba(37,99,235,';
-        particles.forEach(function(p){
-          ctx.beginPath();
-          ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-          ctx.fillStyle=color+p.o+')';
-          ctx.fill();
-          p.x+=p.dx; p.y+=p.dy;
-          if(p.x<0||p.x>canvas.width)p.dx*=-1;
-          if(p.y<0||p.y>canvas.height)p.dy*=-1;
-        });
-        requestAnimationFrame(drawParticles);
-      }
-      drawParticles();
-    }
-  });
-})();
+  var eye = document.getElementById('eye-btn');
+  var pw = document.getElementById('password');
+  if (eye && pw) {
+    eye.addEventListener('click', function () {
+      var shown = pw.type === 'text';
+      pw.type = shown ? 'password' : 'text';
+      eye.textContent = shown ? 'Show' : 'Hide';
+      eye.setAttribute('aria-label', shown ? 'Show password' : 'Hide password');
+    });
+  }
+});
 </script>
 </body>
 </html>
